@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth UI */
+* {
+  transition: all 0.2s ease;
+}
+
+/* Scrollbar clean */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
