@@ -1,62 +1,228 @@
-# ODSS (One Door System Support) - Mayora
-> [cite_start]Satu Pintu Untuk Kebutuhan System Support [cite: 3]
+# 🚀 ODSS – One Door System Support
 
-![Status](https://img.shields.io/badge/Status-In--Progress-orange)
-![Framework](https://img.shields.io/badge/Framework-Design--Thinking-blue)
-![Company](https://img.shields.io/badge/Company-MAYORA-red)
+![Status](https://img.shields.io/badge/status-in%20progress-yellow)
+![Version](https://img.shields.io/badge/version-0.1-blue)
+![License](https://img.shields.io/badge/license-internal-lightgrey)
 
-[cite_start]**ODSS** adalah platform kendali terpusat yang dirancang untuk menyatukan seluruh alur kerja divisi System Support di **PT Mayora Indah Tbk**[cite: 1, 2, 4]. [cite_start]Proyek ini fokus pada otomatisasi data dan visibilitas real-time untuk memastikan setiap keputusan operasional didasarkan pada data yang akurat[cite: 22].
-
----
-
-## 📌 Masalah & Tantangan (Pain Points)
-[cite_start]Berdasarkan analisis internal, terdapat beberapa kendala utama yang menghambat produktivitas tim[cite: 5]:
-
-* [cite_start]**Crunching Data KPI Manual:** Pengolahan data performa personal masih menggunakan Excel secara manual[cite: 14, 15].
-* [cite_start]**Data Tersebar:** Pengelolaan manual menciptakan celah kesalahan (human error) yang besar[cite: 7].
-* [cite_start]**Misalignment Komunikasi:** Strategi dari level *Strategical* sering kali tidak tersampaikan dengan baik ke level *Operational*[cite: 17, 18].
-* [cite_start]**Monitoring Project Pilot:** Banyak proyek yang sudah dibuat namun tidak terlaksana secara maksimal karena kurangnya pengawasan terpadu[cite: 19, 20].
+> One Door System untuk monitoring, automasi, dan transparansi kerja berbasis data.
+<img width="969" height="120" alt="image" src="https://github.com/user-attachments/assets/67214341-62b8-420b-ad73-986a21e01aae" />
 
 ---
 
-## 🚀 Solusi & Fitur Utama
-[cite_start]ODSS menghadirkan solusi "Satu Pintu" dengan fitur-fitur berikut[cite: 21, 23]:
+## 📌 Overview
 
-* [cite_start]**Dashboard Monitoring Real-Time:** Memberikan visibilitas instan terhadap progres kerja[cite: 24].
-* [cite_start]**Gamifikasi Rangking:** Mendorong persaingan sehat melalui transparansi pencapaian KPI[cite: 25, 287].
-* [cite_start]**Sentralisasi Data:** Mengintegrasikan seluruh data dalam satu database terpadu[cite: 26].
-* [cite_start]**Manajemen Proyek:** Dilengkapi dengan *Calendar Project*, *Notulensi Proyek*, dan *Monitoring Project Priority*[cite: 29, 30, 37].
+ODSS adalah platform terintegrasi untuk menyatukan seluruh kebutuhan system support dalam satu pintu.
+Fokus utama: **otomasi data, monitoring real-time, dan alignment antar tim**.
 
 ---
 
-## 🛠️ Arsitektur Teknis
-[cite_start]Sistem ini dibangun dengan mengedepankan otomatisasi alur kerja[cite: 72, 76].
+## 👀 Preview UI
 
-### Tech Stack:
-* [cite_start]**Coda:** Sebagai basis database dan antarmuka dashboard pengguna[cite: 73].
-* [cite_start]**n8n:** Engine otomasi yang memperbarui data secara otomatis setiap 15 menit[cite: 74, 83].
-* [cite_start]**Google Calendar:** Sinkronisasi jadwal dan *timeline* proyek secara langsung[cite: 88, 89].
+### 📊 Dashboard
 
-### Alur Otomatisasi (Workflow):
-1.  [cite_start]**Start:** Triger otomatisasi dimulai[cite: 80].
-2.  [cite_start]**Setting & Otomasi n8n:** Menarik data dari berbagai sumber[cite: 81, 82].
-3.  [cite_start]**Sync ODSS:** Update data ke dashboard setiap 15 menit[cite: 83, 84].
-4.  [cite_start]**Finish:** User menerima informasi terbaru secara real-time[cite: 85, 86].
+<img width="2560" height="1978" alt="image" src="https://github.com/user-attachments/assets/bd82de1d-3655-4cb1-8428-35f82d61bb01" />
 
 ---
 
-## 💻 Cuplikan Implementasi
+## ⚡ Problem
 
-### 1. Data Transformation (n8n Logic)
-Contoh logika JavaScript di n8n untuk membersihkan data sebelum masuk ke ODSS:
+* Data KPI masih manual (Excel)
+* Data tersebar & tidak terpusat
+* Monitoring project tidak optimal
+* Komunikasi strategical ↔ operational kurang sinkron
+
+---
+
+## 💡 Solution
+
+ODSS menyediakan:
+
+* Dashboard real-time
+* Sentralisasi data
+* Automasi workflow (n8n)
+* Monitoring project & KPI
+* Sistem transparansi & alignment
+
+---
+
+## 🧩 Features
+
+* 📊 Dashboard Monitoring
+* 📈 KPI Tracking
+* 🗂️ Project Monitoring
+* 📝 Notulensi & Calendar
+* 🎯 Project Priority
+* 🏆 Gamifikasi Ranking
+* 🔄 Automation Data
+
+---
+
+## 🏗️ Architecture (Simplified)
+
+```text
+[User]
+   ↓
+[ODSS System]
+   ↓
+[n8n Automation] ──→ [Google Calendar / Spreadsheet]
+   ↓
+[Database / Cloud]
+   ↓
+[Dashboard Real-Time]
+```
+
+---
+
+## 🔄 Example Automation (n8n)
+
 ```javascript
-const rawData = items[0].json;
-return rawData.map(item => ({
-    employee_id: item.id,
-    kpi_score: parseFloat(item.score).toFixed(2),
-    status: item.score >= item.target ? "Achieved" : "Under Target"
-}));
+{
+  "trigger": "interval (15 minutes)",
+  "actions": [
+    "fetch data from spreadsheet",
+    "process KPI",
+    "update database",
+    "refresh dashboard"
+  ]
+}
+```
 
+---
 
+## 🧑‍💻 Example API
 
-# 2. SQL Query (KPI Monitoring)
+```javascript
+// Node.js (Express)
+app.get("/api/kpi", async (req, res) => {
+  const data = await getKPI();
+  res.json({
+    status: "success",
+    data
+  });
+});
+```
+
+---
+
+## 🧪 Installation & Setup
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/your-username/odss.git
+cd odss
+```
+
+---
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+---
+
+### 3. Setup Environment
+
+Buat file `.env`:
+
+```env
+PORT=3000
+DB_URL=your_database_url
+API_KEY=your_api_key
+```
+
+---
+
+### 4. Run Project
+
+```bash
+npm run dev
+```
+
+---
+
+### 5. Setup n8n (Automation)
+
+* Install n8n:
+
+```bash
+npm install n8n -g
+```
+
+* Jalankan:
+
+```bash
+n8n start
+```
+
+* Buat workflow:
+
+  * Trigger: interval (15 menit)
+  * Integrasi: Google Sheets / API
+  * Output: update database ODSS
+
+---
+
+## 🔐 Role Access
+
+| Role            | Access                   |
+| --------------- | ------------------------ |
+| Team            | KPI, Dashboard, Calendar |
+| Section Head    | + Monitoring Team        |
+| Dept Head       | + Strategic Monitoring   |
+| Group Dept Head | Full Access              |
+
+---
+
+## 🧠 Development Method
+
+Design Thinking:
+
+1. Empathize
+2. Define
+3. Ideate
+4. Prototype
+5. Test
+
+---
+
+## 📅 Timeline
+
+* Feb → Brainstorming
+* Mar → Data & Design
+* Apr → Development
+* May → Preparation
+
+---
+
+## 👥 Team
+
+* Christian Kevin E — Product Owner / Developer
+* Mario Widiarta — Product Owner / Developer
+* Chornelius Prasetyadharma — Designer / Developer
+* Kuncoro Ariadi — Designer / Developer
+
+---
+
+## 🚧 Status
+
+**Currently in development**
+
+---
+
+## 🎯 Goals
+
+* Monitoring berbasis data
+* Transparansi tim
+* Optimalisasi KPI
+* Alignment strategical & operational
+
+---
+
+## 📄 License
+
+Internal Project — Mayora
+
+---
