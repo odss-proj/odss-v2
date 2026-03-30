@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ODSS (One Door System Support) - Mayora
+> [cite_start]Satu Pintu Untuk Kebutuhan System Support [cite: 3]
 
-## Getting Started
+![Status](https://img.shields.io/badge/Status-In--Progress-orange)
+![Framework](https://img.shields.io/badge/Framework-Design--Thinking-blue)
+![Company](https://img.shields.io/badge/Company-MAYORA-red)
 
-First, run the development server:
+[cite_start]**ODSS** adalah platform kendali terpusat yang dirancang untuk menyatukan seluruh alur kerja divisi System Support di **PT Mayora Indah Tbk**[cite: 1, 2, 4]. [cite_start]Proyek ini fokus pada otomatisasi data dan visibilitas real-time untuk memastikan setiap keputusan operasional didasarkan pada data yang akurat[cite: 22].
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📌 Masalah & Tantangan (Pain Points)
+[cite_start]Berdasarkan analisis internal, terdapat beberapa kendala utama yang menghambat produktivitas tim[cite: 5]:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+* [cite_start]**Crunching Data KPI Manual:** Pengolahan data performa personal masih menggunakan Excel secara manual[cite: 14, 15].
+* [cite_start]**Data Tersebar:** Pengelolaan manual menciptakan celah kesalahan (human error) yang besar[cite: 7].
+* [cite_start]**Misalignment Komunikasi:** Strategi dari level *Strategical* sering kali tidak tersampaikan dengan baik ke level *Operational*[cite: 17, 18].
+* [cite_start]**Monitoring Project Pilot:** Banyak proyek yang sudah dibuat namun tidak terlaksana secara maksimal karena kurangnya pengawasan terpadu[cite: 19, 20].
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🚀 Solusi & Fitur Utama
+[cite_start]ODSS menghadirkan solusi "Satu Pintu" dengan fitur-fitur berikut[cite: 21, 23]:
 
-To learn more about Next.js, take a look at the following resources:
+* [cite_start]**Dashboard Monitoring Real-Time:** Memberikan visibilitas instan terhadap progres kerja[cite: 24].
+* [cite_start]**Gamifikasi Rangking:** Mendorong persaingan sehat melalui transparansi pencapaian KPI[cite: 25, 287].
+* [cite_start]**Sentralisasi Data:** Mengintegrasikan seluruh data dalam satu database terpadu[cite: 26].
+* [cite_start]**Manajemen Proyek:** Dilengkapi dengan *Calendar Project*, *Notulensi Proyek*, dan *Monitoring Project Priority*[cite: 29, 30, 37].
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Arsitektur Teknis
+[cite_start]Sistem ini dibangun dengan mengedepankan otomatisasi alur kerja[cite: 72, 76].
 
-## Deploy on Vercel
+### Tech Stack:
+* [cite_start]**Coda:** Sebagai basis database dan antarmuka dashboard pengguna[cite: 73].
+* [cite_start]**n8n:** Engine otomasi yang memperbarui data secara otomatis setiap 15 menit[cite: 74, 83].
+* [cite_start]**Google Calendar:** Sinkronisasi jadwal dan *timeline* proyek secara langsung[cite: 88, 89].
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Alur Otomatisasi (Workflow):
+1.  [cite_start]**Start:** Triger otomatisasi dimulai[cite: 80].
+2.  [cite_start]**Setting & Otomasi n8n:** Menarik data dari berbagai sumber[cite: 81, 82].
+3.  [cite_start]**Sync ODSS:** Update data ke dashboard setiap 15 menit[cite: 83, 84].
+4.  [cite_start]**Finish:** User menerima informasi terbaru secara real-time[cite: 85, 86].
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 💻 Cuplikan Implementasi
+
+### 1. Data Transformation (n8n Logic)
+Contoh logika JavaScript di n8n untuk membersihkan data sebelum masuk ke ODSS:
+```javascript
+const rawData = items[0].json;
+return rawData.map(item => ({
+    employee_id: item.id,
+    kpi_score: parseFloat(item.score).toFixed(2),
+    status: item.score >= item.target ? "Achieved" : "Under Target"
+}));
+
+
+
+# 2. SQL Query (KPI Monitoring)
