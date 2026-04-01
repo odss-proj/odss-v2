@@ -1,59 +1,59 @@
-import Sidebar from "../../components/sidebar"
-import { Bell, Search } from "lucide-react"
+"use client"
+
+import { useState } from "react"
+import Sidebar from "../../components/dashboard/sidebar"
+import { Bell, Search, Menu } from "lucide-react"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(true)
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
 
-      <Sidebar />
+      {/* SIDEBAR */}
+      {open && (
+        <div className="w-64 bg-white border-r">
+          <Sidebar />
+        </div>
+      )}
 
+      {/* MAIN */}
       <div className="flex-1 flex flex-col">
 
-    <div className="bg-white px-6 py-4 border-b flex justify-between items-center">
+        {/* HEADER */}
+        <div className="bg-white px-6 py-4 border-b flex justify-between items-center">
 
-    {/* LEFT */}
-    <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
 
-        {/* TITLE */}
-        <div>
-        <p className="text-sm text-gray-400">
-            Good Afternoon, Napoleon!
-        </p>
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+            <button onClick={() => setOpen(!open)}>
+              <Menu />
+            </button>
+
+            <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg w-64">
+              <Search size={16} />
+              <input className="ml-2 bg-transparent outline-none w-full" />
+            </div>
+
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Bell />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-green-500 rounded-full" />
+              Kevin
+            </div>
+          </div>
+
         </div>
 
-        {/* SEARCH */}
-        <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg w-64">
-        <Search size={16} className="text-gray-500" />
-        <input
-            className="bg-transparent outline-none ml-2 text-sm w-full"
-            placeholder="Search..."
-        />
+        {/* CONTENT */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {children}
         </div>
-
-    </div>
-
-    {/* RIGHT */}
-    <div className="flex items-center gap-4">
-
-        <div className="p-2 rounded-full border hover:bg-gray-100 cursor-pointer">
-        <Bell size={18} className="text-gray-600" />
-        </div>
-
-        <div className="flex items-center gap-2">
-        <div className="w-9 h-9 bg-green-500 rounded-full" />
-        <span className="text-sm font-medium">Kevin</span>
-        </div>
-
-    </div>
-
-    </div>
-
-        <div className="p-6">{children}</div>
 
       </div>
     </div>
