@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { useRouter } from "next/navigation"
+import "../globals.css"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -10,62 +11,85 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("MDM")
+  const [loading, setLoading] = useState(false)
 
   const handleRegister = async () => {
+    setLoading(true)
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
 
-    if (error) return alert(error.message)
+    if (error) {
+      alert(error.message)
+      setLoading(false)
+      return
+    }
 
-    // simpan role
-    await supabase.from("profiles").insert({
-      id: data.user?.id,
-      email,
-      role,
-    })
+    const user = data.user
+    console.log("REGISTER USER:", user)
 
-    alert("Register berhasil!")
+    if (user) {
+      const { error: insertError } = await supabase.from("profiles").insert({
+        id: user.id,
+        email: user.email,
+        role: role.toUpperCase(), // 🔥 biar konsisten
+      })
+
+      if (insertError) {
+        alert("Gagal simpan profile: " + insertError.message)
+        setLoading(false)
+        return
+      }
+    }
+
+    alert("Register berhasil! Silakan login.")
     router.push("/login")
+    setLoading(false)
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-r from-green-400 to-teal-500">
-      <div className="bg-white p-8 rounded-2xl w-[400px]">
-        <h1 className="text-xl font-bold text-center">Register</h1>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-green-400 to-teal-500">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-[350px]">
+        <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
 
         <input
+          className="w-full mb-3 p-2 border rounded"
           placeholder="Email"
-          className="border p-2 w-full mt-4"
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
+          className="w-full mb-3 p-2 border rounded"
           type="password"
           placeholder="Password"
-          className="border p-2 w-full mt-2"
           onChange={(e) => setPassword(e.target.value)}
         />
 
         <select
-          className="border p-2 w-full mt-2"
+          className="w-full mb-4 p-2 border rounded"
           onChange={(e) => setRole(e.target.value)}
         >
-          <option>MDM</option>
-          <option>APPS</option>
-          <option>APPC</option>
-          <option>BR</option>
-          <option>APPG</option>
-          <option>DEV</option>
+          <option value="MDM">MDM</option>
+          <option value="APPC">APPC</option>
+          <option value="APPT">APPT</option>
         </select>
 
         <button
           onClick={handleRegister}
-          className="bg-green-500 text-white w-full mt-4 p-2 rounded"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
         >
-          Register
+          {loading ? "Loading..." : "Register"}
         </button>
+
+        <p className="text-sm text-center mt-4">
+          Sudah punya akun?{" "}
+          <a href="/login" className="text-green-600">
+            Login
+          </a>
+        </p>
       </div>
     </div>
   )

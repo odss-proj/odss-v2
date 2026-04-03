@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import LogoutButton from "./logout-button"
 
 type Role = "mdm" | "appc" | "appt"
 
@@ -49,6 +51,7 @@ export default function Sidebar({ role = "mdm" }: Props) {
   return (
     <div className="w-64 bg-white border-r h-screen fixed left-0 top-0 p-4 flex flex-col justify-between">
 
+      {/* TOP */}
       <div>
 
         {/* LOGO */}
@@ -73,25 +76,29 @@ export default function Sidebar({ role = "mdm" }: Props) {
 
           {/* MONITORING KPI */}
           <div>
+
             <button
               onClick={() => setOpenKPI(!openKPI)}
               className="w-full flex justify-between items-center px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100"
             >
-              Monitoring KPI
-              <span className="text-xs">
-                {openKPI ? "▲" : "▼"}
-              </span>
+              <span>Monitoring KPI</span>
+
+              {openKPI ? (
+                <ChevronUp size={16} />
+              ) : (
+                <ChevronDown size={16} />
+              )}
             </button>
 
             {/* NESTED */}
             {openKPI && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-1 ml-6 border-l border-gray-200 pl-3">
 
                 {menu.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-full text-sm transition ${
+                    className={`flex items-center gap-3 px-3 py-2 rounded-full text-sm transition ${
                       pathname === item.href
                         ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
                         : "text-gray-500 hover:bg-gray-100"
@@ -106,26 +113,33 @@ export default function Sidebar({ role = "mdm" }: Props) {
           </div>
 
           {/* MENU LAIN */}
-          <Link href="/dashboard/calendar" className="block px-4 py-2 text-sm text-gray-600">
+          <Link
+            href="/dashboard/calendar"
+            className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl"
+          >
             Calendar
           </Link>
 
-          <Link href="/dashboard/notes" className="block px-4 py-2 text-sm text-gray-600">
+          <Link
+            href="/dashboard/notes"
+            className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl"
+          >
             Notes
           </Link>
 
         </div>
+
       </div>
 
       {/* FOOTER */}
       <div className="space-y-2">
+
         <button className="w-full bg-gradient-to-r from-blue-500 to-green-400 text-white py-3 rounded-xl">
           Extract KPI
         </button>
 
-        <button className="text-gray-500 text-sm px-2">
-          Log Out
-        </button>
+        <LogoutButton />
+
       </div>
 
     </div>

@@ -1,9 +1,9 @@
 "use client"
 
-import Banner from "../../components/dashboard/banner"
-import KpiCard from "../../components/dashboard/kpi-card"
-import PerformanceChart from "../../components/dashboard/performancechart"
-import Leaderboard from "../../components/dashboard/leaderboard"
+import Banner from "../layout/banner"
+import KpiCard from "../layout/kpi-card"
+import PerformanceChart from "../layout/performancechart"
+import Leaderboard from "../layout/leaderboard"
 
 export default function DashboardAppc() {
   return (

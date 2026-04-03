@@ -1,13 +1,21 @@
-import Banner from "./banner"
-import KpiCard from "./kpi-card"
-import Leaderboard from "./leaderboard"
-import Chart from "./chart"
+import Banner from "../layout/banner"
+import KpiCard from "../layout/kpi-card"
+import Leaderboard from "../layout/leaderboard"
+import Chart from "../layout/chart"
 
-export default function DashboardPage({
-  config,
-}: {
-  config: any
-}) {
+type KpiItem = {
+  title: string
+  value: string
+}
+
+type Props = {
+  config: {
+    name: string
+    kpi: KpiItem[]
+  }
+}
+
+export default function DashboardMdm({ config }: Props) {
   return (
     <div className="space-y-6">
 
@@ -35,7 +43,7 @@ export default function DashboardPage({
 
       {/* KPI */}
       <div className="grid grid-cols-4 gap-4">
-        {config.kpi.map((item: any, i: number) => (
+        {config.kpi.map((item, i) => (
           <KpiCard
             key={i}
             title={item.title}

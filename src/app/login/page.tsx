@@ -3,70 +3,97 @@
 import { useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { useRouter } from "next/navigation"
+import "../globals.css"
 
 export default function LoginPage() {
   const router = useRouter()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
+    setLoading(true)
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    if (error) return alert(error.message)
+    if (error) {
+      alert(error.message)
+      setLoading(false)
+      return
+    }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single()
+    const user = data.user
+    console.log("LOGIN USER:", user)
 
-    const role = profile?.role
-    router.push(`/dashboard/${role?.toLowerCase()}`)
+    if (user) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+      console.log("PROFILE:", profile)
+
+      if (profileError || !profile) {
+        alert("Profile tidak ditemukan!")
+        setLoading(false)
+        return
+      }
+
+      const role = profile.role?.toUpperCase()
+      console.log("ROLE:", role)
+
+      // 🔥 REDIRECT BERDASARKAN ROLE
+      if (role === "MDM") {
+        router.push("/dashboard/mdm")
+      } else if (role === "APPC") {
+        router.push("/dashboard/appc")
+      } else if (role === "APPT") {
+        router.push("/dashboard/appt")
+      } else {
+        alert("Role tidak dikenali!")
+      }
+    }
+
+    setLoading(false)
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-400 to-teal-500">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-green-400 to-teal-500">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-[350px]">
+        <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
 
-      {/* CARD */}
-      <div className="bg-white w-[380px] p-8 rounded-2xl shadow-sm hover:shadow-md-2xl">
-
-        {/* LOGO */}
-        <h1 className="text-4xl font-bold text-center text-green-600">
-          ODSS
-        </h1>
-
-        <p className="text-center text-gray-500 mt-2">
-          Selamat datang di ODSS
-        </p>
-
-        {/* INPUT EMAIL */}
         <input
-          type="email"
-          placeholder="Masukkan email"
-          className="w-full mt-6 p-3 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400"
+          className="w-full mb-3 p-2 border rounded"
+          placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        {/* INPUT PASSWORD */}
         <input
+          className="w-full mb-4 p-2 border rounded"
           type="password"
-          placeholder="Masukkan password"
-          className="w-full mt-3 p-3 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400"
+          placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* BUTTON */}
         <button
           onClick={handleLogin}
-          className="w-full mt-6 bg-gradient-to-r from-green-500 to-teal-500 text-white p-3 rounded-2xl font-semibold hover:opacity-90 transition"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
         >
-          Login
+          {loading ? "Loading..." : "Login"}
         </button>
 
+        <p className="text-sm text-center mt-4">
+          Belum punya akun?{" "}
+          <a href="/register" className="text-green-600">
+            Register
+          </a>
+        </p>
       </div>
     </div>
   )
