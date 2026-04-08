@@ -6,16 +6,36 @@ import Chart from "../layout/chart"
 type KpiItem = {
   title: string
   value: string
+  icon?: string
+  color?: string
+}
+
+type LeaderboardEntry = {
+  name: string
+  score: number
+}
+
+type ChartEntry = {
+  name: string
+  Setting: number
+  Akurasi: number
 }
 
 type Props = {
   config: {
     name: string
     kpi: KpiItem[]
+    leaderboard: LeaderboardEntry[]
+    chartData: ChartEntry[]
   }
 }
 
 export default function DashboardMdm({ config }: Props) {
+  // Hitung top score untuk card "Total Poin"
+  const topScore = config.leaderboard.length > 0
+    ? config.leaderboard[0].score.toFixed(1)
+    : "-"
+
   return (
     <div className="space-y-6">
 
@@ -48,8 +68,8 @@ export default function DashboardMdm({ config }: Props) {
             key={i}
             title={item.title}
             value={item.value}
-            color="#e5e7eb"
-            icon={<div />}
+            color={item.color ?? "bg-gray-100"}
+            icon={item.icon ?? "📊"}
           />
         ))}
       </div>
@@ -60,11 +80,14 @@ export default function DashboardMdm({ config }: Props) {
         <div className="space-y-4">
 
           <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white p-5 rounded-2xl">
-            <p>Total Poin</p>
-            <h2 className="text-3xl font-bold">5.000</h2>
+            <p className="text-sm opacity-80">Top Score</p>
+            <h2 className="text-3xl font-bold">{topScore}</h2>
+            <p className="text-xs opacity-70 mt-1">
+              {config.leaderboard[0]?.name ?? "—"}
+            </p>
           </div>
 
-          <Leaderboard />
+          <Leaderboard data={config.leaderboard} />
 
         </div>
 
@@ -72,7 +95,7 @@ export default function DashboardMdm({ config }: Props) {
           <h2 className="mb-4 font-semibold">
             Performance {config.name}
           </h2>
-          <Chart />
+          <Chart data={config.chartData} />
         </div>
 
       </div>

@@ -6,23 +6,38 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts"
 
-const data = [
-  { name: "Bobot", value: 700 },
-  { name: "Done", value: 450 },
-  { name: "Avg", value: 480 },
-]
+type ChartEntry = {
+  name: string
+  Setting: number
+  Akurasi: number
+}
 
-export default function Chart() {
+type Props = {
+  data?: ChartEntry[]
+}
+
+export default function Chart({ data = [] }: Props) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[250px] text-sm text-gray-400">
+        Belum ada data chart
+      </div>
+    )
+  }
+
   return (
     <ResponsiveContainer width="100%" height={250}>
-      <BarChart data={data}>
-        <XAxis dataKey="name" />
-        <YAxis />
+      <BarChart data={data} barGap={4}>
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 12 }} />
         <Tooltip />
-        <Bar dataKey="value" fill="#22c55e" radius={[6, 6, 0, 0]} />
+        <Legend />
+        <Bar dataKey="Setting" fill="#22c55e" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="Akurasi" fill="#3b82f6" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
