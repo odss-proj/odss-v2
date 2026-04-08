@@ -48,15 +48,12 @@ export default function LoginPage() {
       console.log("ROLE:", role)
 
       // 🔥 REDIRECT BERDASARKAN ROLE
-      if (role === "MDM") {
-        router.push("/dashboard/mdm")
-      } else if (role === "APPC") {
-        router.push("/dashboard/appc")
-      } else if (role === "APPT") {
-        router.push("/dashboard/appt")
-      } else {
-        alert("Role tidak dikenali!")
-      }
+      if (role === "MDM") router.push("/dashboard/mdm")
+      else if (role === "APPC") router.push("/dashboard/appc")
+      else if (role === "APPT") router.push("/dashboard/appt")
+      else if (role === "APPG") router.push("/dashboard/appg")
+      else if (role === "BR") router.push("/dashboard/br")
+      else if (role === "DEV") router.push("/dashboard/dev")
     }
 
     setLoading(false)

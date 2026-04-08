@@ -1,7 +1,7 @@
 "use client"
 
+import { useState } from "react"
 import Sidebar from "../../components/layout/sidebar"
-import { Bell, Search } from "lucide-react"
 import Header from "../../components/layout/header"
 
 export default function DashboardLayout({
@@ -9,22 +9,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
 
       {/* SIDEBAR */}
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} />
 
-      <div className="flex-1 flex flex-col ml-64">
+      {/* CONTENT */}
+      <div
+        className={`transition-all duration-300 ${
+          isSidebarOpen ? "ml-64" : "ml-0"
+        }`}
+      >
+        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-        {/* 🔥 HEADER GLOBAL */}
-        <Header />
-
-        {/* CONTENT */}
-        <div className="p-6">
-          {children}
-        </div>
-
+        <div className="p-6">{children}</div>
       </div>
     </div>
   )

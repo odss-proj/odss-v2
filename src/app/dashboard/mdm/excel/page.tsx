@@ -1,15 +1,7 @@
-export default function ExcelPage() {
-  return (
-    <div className="space-y-4">
+"use client"
 
-      <h1 className="text-2xl font-semibold">
-        Dashboard Excel
-      </h1>
+import SpreadsheetPage from "../../../../components/kpi/SpreadsheetPage"
 
-      <div className="bg-white p-6 rounded-xl border">
-        Ini nanti isi dashboard excel (table/chart dari excel)
-      </div>
-
-    </div>
-  )
+export default function Page() {
+  return <SpreadsheetPage />
 }

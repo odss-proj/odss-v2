@@ -1,3 +1,5 @@
+import WSSPage from "../../../../components/kpi/WSSPage"
+
 export default function Page() {
-  return <div>WSS Page</div>
+  return <WSSPage />
 }
