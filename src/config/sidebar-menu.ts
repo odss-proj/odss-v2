@@ -1,4 +1,4 @@
-export type Role = "MDM" | "APPC" | "APPT" | "APPG" | "BR" | "DEV"
+export type Role = "MDM" | "APPC" | "APPT" | "APPG" | "BR" | "DEV" | "SUPERADMIN"
 
 export const sidebarMenu: Record<
   Role,
@@ -42,4 +42,16 @@ export const sidebarMenu: Record<
   APPG: [],
   BR: [],
   DEV: [],
+  SUPERADMIN: [
+    {
+      title: "Upload Data",
+      children: [
+        { name: "DT Transfer", path: "/dashboard/superadmin" },
+        { name: "Own Cloud", path: "/dashboard/superadmin" },
+        { name: "Monitoring WF", path: "/dashboard/superadmin" },
+        { name: "Coda", path: "/dashboard/superadmin" },
+        { name: "Logix", path: "/dashboard/superadmin" },
+      ],
+    },
+  ],
 }

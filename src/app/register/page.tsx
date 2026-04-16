@@ -70,7 +70,7 @@ export default function RegisterPage() {
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="w-full border mb-4 p-2 border rounded"
         >
           <option value="">Pilih Role</option>
           <option value="MDM">MDM</option>
