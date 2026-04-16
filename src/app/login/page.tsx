@@ -47,16 +47,20 @@ export default function LoginPage() {
       const role = profile.role?.toUpperCase()
       console.log("ROLE:", role)
 
-      // 🔥 REDIRECT BERDASARKAN ROLE
       if (role === "MDM") router.push("/dashboard/mdm")
       else if (role === "APPC") router.push("/dashboard/appc")
       else if (role === "APPT") router.push("/dashboard/appt")
       else if (role === "APPG") router.push("/dashboard/appg")
       else if (role === "BR") router.push("/dashboard/br")
       else if (role === "DEV") router.push("/dashboard/dev")
+      else if (role === "SUPERADMIN") router.push("/superadmin")
     }
 
     setLoading(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleLogin()
   }
 
   return (
@@ -67,14 +71,18 @@ export default function LoginPage() {
         <input
           className="w-full mb-3 p-2 border rounded"
           placeholder="Email"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={handleKeyDown}
         />
 
         <input
           className="w-full mb-4 p-2 border rounded"
           type="password"
           placeholder="Password"
+          value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={handleKeyDown}
         />
 
         <button
