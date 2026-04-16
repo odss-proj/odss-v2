@@ -344,6 +344,72 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   // Summary stats
   const uploadedTabs = TABS.filter((t) => uploadStates[t.key].status === "success").length
 
+  const sendToDatabase = async () => {
+    try {
+      setIsSending(true)
+      setProgress(0)
+
+      let totalRows = 0
+      let processed = 0
+
+      // hitung total dulu
+      Object.values(uploadStates).forEach((s) => {
+        if (s.status === "success") {
+          totalRows += s.data.length
+        }
+      })
+
+      for (const [tab, state] of Object.entries(uploadStates)) {
+        if (state.status !== "success") continue
+
+        const data = state.data
+
+        for (let i = 0; i < data.length; i += 500) {
+          const chunk = data.slice(i, i + 500)
+
+          console.log("Sending:", tab, chunk.length)
+
+          const res = await fetch(
+            "https://jytxkqhuwtnmbycxkzdv.functions.supabase.co/upload-data",
+            {
+              method: "POST",
+              mode: "cors",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+              },
+              body: JSON.stringify({
+                table: tab,
+                data: chunk,
+              }),
+            }
+          )
+
+          const result = await res.json()
+
+          if (!res.ok) {
+            console.error("ERROR:", result)
+            throw new Error(result.error || "Unknown error")
+          }
+
+          processed += chunk.length
+          const percent = Math.round((processed / totalRows) * 100)
+          setProgress(percent)
+        }
+      }
+
+      alert("✅ Data berhasil dikirim ke database")
+    } catch (err: any) {
+      console.error("FINAL ERROR:", err)
+      alert(`❌ ${err.message}`)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const [isSending, setIsSending] = useState(false)
+  const [progress, setProgress] = useState(0)
   const isAllUploaded = uploadedTabs === TABS.length
   return (
     <div className="space-y-6">
@@ -378,10 +444,8 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="flex items-center gap-3">
           <button
             disabled={!isAllUploaded}
-            onClick={() => {
-              console.log("🚀 Send to DB triggered")
-              // nanti kita isi logic supabase di sini
-            }}
+            onClick={sendToDatabase}
+            
             className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition
               ${
                 isAllUploaded
@@ -633,6 +697,35 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           </p>
         </div>
       )}
+        <div className="space-y-6">
+    {/* semua UI kamu */}
+
+        {/* ⬇️ TARUH DI SINI (PALING BAWAH) */}
+        {isSending && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-[320px] shadow-xl text-center">
+              <div className="text-3xl mb-2">🚀</div>
+              <h2 className="font-semibold text-gray-800 mb-2">
+                Mengirim Data ke Database
+              </h2>
+
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                <div
+                  className="bg-green-500 h-3 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <p className="text-sm text-gray-600">
+                {progress}% selesai
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
+
+    
+    
   )
 }
