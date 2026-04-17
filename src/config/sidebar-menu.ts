@@ -1,4 +1,4 @@
-export type Role = "MDM" | "APPC" | "APPT" | "APPG" | "BR" | "DEV" | "SUPERADMIN"
+export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS"
 
 export const sidebarMenu: Record<
   Role,
@@ -29,12 +29,12 @@ export const sidebarMenu: Record<
     },
   ],
 
-  APPT: [
+  "SH-APPS": [
     {
       title: "Monitoring KPI",
       children: [
-        { name: "Coda", path: "/dashboard/appt/coda" },
-        { name: "Logix", path: "/dashboard/appt/logix" },
+        { name: "Coda", path: "/dashboard/apps/coda" },
+        { name: "Logix", path: "/dashboard/apps/logix" },
       ],
     },
   ],
@@ -42,15 +42,16 @@ export const sidebarMenu: Record<
   APPG: [],
   BR: [],
   DEV: [],
+
   SUPERADMIN: [
     {
       title: "Upload Data",
       children: [
-        { name: "DT Transfer", path: "/dashboard/superadmin" },
-        { name: "Own Cloud", path: "/dashboard/superadmin" },
-        { name: "Monitoring WF", path: "/dashboard/superadmin" },
-        { name: "Coda", path: "/dashboard/superadmin" },
-        { name: "Logix", path: "/dashboard/superadmin" },
+        { name: "DT Transfer", path: "/superadmin" },
+        { name: "Own Cloud", path: "/superadmin" },
+        { name: "Monitoring WF", path: "/superadmin" },
+        { name: "Coda", path: "/superadmin" },
+        { name: "Logix", path: "/superadmin" },
       ],
     },
   ],
