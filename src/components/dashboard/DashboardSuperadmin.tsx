@@ -6,9 +6,6 @@ import * as XLSX from "xlsx"
 import Banner from "../layout/banner"
 import { supabase } from "../../lib/supabase"
 
-
-
-
 type TabKey = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
 
 type TabConfig = {
@@ -18,6 +15,169 @@ type TabConfig = {
   color: string
   activeColor: string
   description: string
+}
+
+const parsePercent = (val: any) => {
+  if (val === null || val === undefined) return 0
+
+  if (typeof val === "number") {
+    // Excel kadang simpan 1 = 100%
+    return val <= 1 ? val * 100 : val
+  }
+
+  if (typeof val === "string") {
+    return Number(val.replace("%", "").trim())
+  }
+
+  return 0
+}
+
+const getTableName = (tab: TabKey) => {
+  switch (tab) {
+    case "coda":
+      return "coda_main" // 🔥 arahkan ke sini
+    default:
+      return tab
+  }
+}
+
+const mapDataByTab = (
+  tab: TabKey,
+  data: any[]
+): Record<string, any>[] => {
+  switch (tab) {
+    case "dt_transfer":
+      return data.map((row) => ({
+        kode_subdist: Number(row["Kode Subdist"]),
+        kd_plan: row["Kd Plan"],
+        nama_subdist: row["Nama Subdist"],
+        cover: row["COVER"],
+        pic: row["PIC"],
+        bas: row["BAS"],
+        assh: row["ASSH"],
+        area: row["Area"],
+        tahun: Number(row["TAHUN"]),
+        periode: Number(row["PERIODE"]),
+        week: Number(row["WEEK"]),
+        kpi: row["KPI"],
+        ach: parsePercent(row["% ACH"]),
+      }))
+
+    case "own_cloud":
+      return data.map((row) => ({
+        kode_subdist: Number(row["KODE SUBDIST"]),
+        nama_subdist: row["NAMA SUBDIST"],
+        divisi: row["DIVISI"],
+        territory: row["TERITORY"],
+        area: row["AREA"],
+        grsm: row["GRSM"],
+        region: row["REGION"],
+        tahun: Number(row["TAHUN"]),
+        periode: Number(row["PERIODE"]),
+        week: Number(row["WEEK"]),
+        kpi: row["KPI"],
+        kel_h3: parsePercent(row["% KEL H+3"]),
+        kel_h7: parsePercent(row["% KEL H+7"]),
+        ach: parsePercent(row["% Ach"]),
+        total_selisih: row["TOTAL SELISIH"]
+          ? Number(row["TOTAL SELISIH"])
+          : null,
+        keterangan: row["KETERANGAN"] || "",
+        assh: row["ASSH"],
+        tas: row["TAS"],
+      }))
+
+    case "monitoring_wf":
+      const parseDate = (val: any) => {
+        if (!val) return null
+
+        // kalau sudah Date
+        if (val instanceof Date) {
+          return val.toISOString().split("T")[0]
+        }
+
+        // kalau number (Excel serial)
+        if (typeof val === "number") {
+          const excelEpoch = new Date(1899, 11, 30)
+          const date = new Date(excelEpoch.getTime() + val * 86400000)
+          return date.toISOString().split("T")[0]
+        }
+
+        // kalau string format dd/mm/yyyy
+        if (typeof val === "string") {
+          if (val.includes("/")) {
+            const [d, m, y] = val.split("/")
+            return `${y}-${m}-${d}`
+          }
+
+          // fallback (ISO / lainnya)
+          const d = new Date(val)
+          if (!isNaN(d.getTime())) {
+            return d.toISOString().split("T")[0]
+          }
+        }
+
+        return null
+      }
+
+      return data.map((row) => ({
+        subdis_id: Number(row["SUBDIS_ID"]),
+        subdis_name: row["SUBDIS_NAME"],
+        divisi: row["DIVISI"],
+        type: row["TYPE"],
+        kota: row["KOTA"],
+        region: row["REGION"],
+        tas: row["TAS"],
+        release: Number(row["RELEASE"]),
+        tgl_transfer: parseDate(row["TGL TRANSFER TERAKHIR"]),
+        lama: Number(row["LAMA"]),
+        cut_off: parseDate(row["cut off"]),
+        pekan: Number(row["Pekan"]),
+        prosentase: parsePercent(row["Prosentase"]),
+      }))
+
+    case "logix":
+      return data.map((row) => ({
+        id_user: row["id_user"],
+        user_name: row["user"],
+        kd_branch: row["kd_branch"],
+        branch: row["branch"],
+        nomor_ticket: row["nomor_ticket"],
+        severity: row["severity"],
+        status_ticket: row["status_ticket"],
+        aplikasi: row["aplikasi"],
+        modul: row["modul"],
+        ticket_created_date: row["ticket_created_date"]
+          ? new Date(row["ticket_created_date"])
+          : null,
+        ticket_close_date: row["ticket_close_date"]
+          ? new Date(row["ticket_close_date"])
+          : null,
+        ticket_durasi: Number(row["ticket_durasi"]) || 0,
+        durasi_ticket_hari: Number(row["durasi_ticket_hari"]) || 0,
+      }))
+
+    case "coda":
+      return data.map((row) => ({
+        flag_report: row["Flag Report"],
+        req_type: row["Req. Type"],
+        year_request: Number(row["Year Request"]),
+        quartal: row["Quartal"],
+        application: row["Application"],
+        doc_no: row["Doc. No."],
+        doc_name: row["Doc. Name"],
+        status_dev: row["Status Dev"],
+        status_project: row["Status Project"],
+        project: row["Project"],
+        br_pic: row["BR PIC"],
+        dev_pic: row["Dev PIC"],
+        release: row["Release"],
+        year_done: Number(row["Year Done"]),
+      }))
+
+    default:
+      return data
+  }
 }
 
 const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
@@ -150,6 +310,17 @@ const initialUploadState: UploadState = {
 
 export default function DashboardSuperadmin({ userName = "superadmin" }: { userName?: string }) {
   const router = useRouter()
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const formatTime = (date: Date | null) => {
+    if (!date) return "-"
+
+    return date.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
   const [activeTab, setActiveTab] = useState<TabKey>("dt_transfer")
   const [uploadStates, setUploadStates] = useState<Record<TabKey, UploadState>>(
     () =>
@@ -362,7 +533,7 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       for (const [tab, state] of Object.entries(uploadStates)) {
         if (state.status !== "success") continue
 
-        const data = state.data
+        const data = mapDataByTab(tab as TabKey, state.data)
 
         for (let i = 0; i < data.length; i += 500) {
           const chunk = data.slice(i, i + 500)
@@ -380,7 +551,7 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
               },
               body: JSON.stringify({
-                table: tab,
+                table: getTableName(tab as TabKey),
                 data: chunk,
               }),
             }
@@ -406,8 +577,20 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     } finally {
       setIsSending(false)
     }
+    setLastUpdate(new Date())
   }
 
+  const formatDateTime = (date: Date | null) => {
+  if (!date) return "-"
+
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
   const [isSending, setIsSending] = useState(false)
   const [progress, setProgress] = useState(0)
   const isAllUploaded = uploadedTabs === TABS.length
@@ -415,7 +598,6 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     <div className="space-y-6">
       {/* BANNER */}
       <Banner />
-
       {/* TABS */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2 flex-wrap">
@@ -442,6 +624,24 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
         {/* Button Send DB */}
         <div className="flex items-center gap-3">
+            {/* 🔥 LIVE INDICATOR */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            
+            {/* DOT BLINK */}
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+
+            <span className="font-medium text-green-600">LIVE</span>
+
+            <span className="text-gray-400">•</span>
+            <span>
+              {lastUpdate ? formatTime(lastUpdate) : "Belum update"}
+            </span>
+
+            <span>{formatTime(lastUpdate)}</span>
+          </div>
           <button
             disabled={!isAllUploaded}
             onClick={sendToDatabase}
