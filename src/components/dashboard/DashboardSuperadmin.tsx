@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect  } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from "xlsx"
 import Banner from "../layout/banner"
@@ -138,23 +138,66 @@ const mapDataByTab = (
 
     case "logix":
       return data.map((row) => ({
+        date_logs: row["date_logs"] ? new Date(row["date_logs"]) : null,
+        email: row["email"],
         id_user: row["id_user"],
         user_name: row["user"],
+
         kd_branch: row["kd_branch"],
         branch: row["branch"],
+        pic_branch: row["pic_branch"],
+
         nomor_ticket: row["nomor_ticket"],
+
+        ticket_created_date: row["ticket_created_date"] ? new Date(row["ticket_created_date"]) : null,
+        ticket_created_detail: row["ticket_created_detail"],
+        ticket_created_in_s: Number(row["ticket_created_in_s"]) || 0,
+
         severity: row["severity"],
-        status_ticket: row["status_ticket"],
+        type_supporting: row["type_supporting"],
+        sub_type_supporting: row["sub_type_supporting"],
+        detail_issue: row["detail_issue"],
+
         aplikasi: row["aplikasi"],
         modul: row["modul"],
-        ticket_created_date: row["ticket_created_date"]
-          ? new Date(row["ticket_created_date"])
-          : null,
-        ticket_close_date: row["ticket_close_date"]
-          ? new Date(row["ticket_close_date"])
-          : null,
-        ticket_durasi: Number(row["ticket_durasi"]) || 0,
+        menu: row["menu"],
+
+        status_ticket: row["status_ticket"],
+        last_state: row["last_state"],
+
+        ticket_close_date: row["ticket_close_date"] ? new Date(row["ticket_close_date"]) : null,
+        ticket_close_detail: row["ticket_close_detail"],
+        ticket_close_in_s: Number(row["ticket_close_in_s"]) || 0,
+
+        ticket_durasi: row["ticket_durasi"],
+        ticket_durasi_in_s: Number(row["ticket_durasi_in_s"]) || 0,
+
+        default_respon_time: row["default_respon_time"],
+        default_respon_time_by_severity: row["default_respon_time_by_severity"],
+
+        tas_pic: row["tas_pic"],
+        tas_respon_time: row["tas_respon_time"],
+        tas_respon_time_in_s: Number(row["tas_respon_time_in_s"]) || 0,
+
+        br_pic: row["br_pic"],
+        br_respon_time: row["br_respon_time"],
+        br_respon_time_in_s: Number(row["br_respon_time_in_s"]) || 0,
+
+        dev_pic: row["dev_pic"],
+        dev_respon_time: row["dev_respon_time"],
+        dev_respon_time_in_s: Number(row["dev_respon_time_in_s"]) || 0,
+
         durasi_ticket_hari: Number(row["durasi_ticket_hari"]) || 0,
+        ticket_created_month: row["ticket_created_month"],
+
+        date_extract: row["date_extract"] ? new Date(row["date_extract"]) : null,
+        ticket_in_s: Number(row["ticket_in_s"]) || 0,
+
+        judul_ticket: row["judul_ticket"],
+        deskripsi_ticket: row["deskripsi_ticket"],
+        note_br: row["note_br"],
+        fileset: row["fileset"],
+        solved_by: row["solved_by"],
       }))
 
     case "coda":
@@ -164,15 +207,54 @@ const mapDataByTab = (
         year_request: Number(row["Year Request"]),
         quartal: row["Quartal"],
         application: row["Application"],
+        appx: row["APPX"],
+
+        doc_date: row["Doc. Date"] ? new Date(row["Doc. Date"]) : null,
+        doc_type: row["Doc. Type"],
         doc_no: row["Doc. No."],
         doc_name: row["Doc. Name"],
+        description: row["Description"],
+
         status_dev: row["Status Dev"],
         status_project: row["Status Project"],
+
+        user_name: row["User"],
+        user_request: row["User Request"],
         project: row["Project"],
+
         br_pic: row["BR PIC"],
+        task_pic_2: row["Task PIC_2"],
+        testing_pic_1: row["Testing PIC 1"],
+        testing_pic_2: row["Testing PIC 2"],
+        testing_pic_3: row["Testing PIC 3"],
         dev_pic: row["Dev PIC"],
+
+        pilot: row["Pilot"],
         release: row["Release"],
         year_done: Number(row["Year Done"]),
+
+        bobot_dokumen: Number(row["Bobot Dokumen"]) || 0,
+        bobot_testing_pic_1: Number(row["Bobot Testing PIC 1"]) || 0,
+        bobot_testing_pic_2: Number(row["Bobot Testing PIC 2"]) || 0,
+        bobot_testing_pic_3: Number(row["Bobot Testing PIC 3"]) || 0,
+
+        yeardone2: Number(row["YearDone2"]) || 0,
+
+        bobot_test2_2025: Number(row["Bobot Test2 2025"]) || 0,
+        test2_done_2025: Number(row["Test2 Done 2025"]) || 0,
+
+        bobot_test3_2025: Number(row["Bobot Test3 2025"]) || 0,
+        test3_done_2025: Number(row["Test3 Done 2025"]) || 0,
+
+        bobot_test1_2026: Number(row["Bobot Test1 2026"]) || 0,
+        test1_done_2026: Number(row["Test1 Done 2026"]) || 0,
+
+        bobot_test2_2026: Number(row["Bobot Test2 2026"]) || 0,
+        test2_done_2026: Number(row["Test2 Done 2026"]) || 0,
+
+        bobot_test3_2026: Number(row["Bobot Test3 2026"]) || 0,
+        test3_done_2026: Number(row["Test3 Done 2026"]) || 0,
+
       }))
 
     default:
@@ -289,6 +371,7 @@ const TABS: TabConfig[] = [
 ]
 
 type UploadState = {
+  isFromUpload?: boolean
   fileName: string | null
   data: Record<string, unknown>[]
   headers: string[]
@@ -309,8 +392,13 @@ const initialUploadState: UploadState = {
 }
 
 export default function DashboardSuperadmin({ userName = "superadmin" }: { userName?: string }) {
-  const router = useRouter()
+  const [activeTab, setActiveTab] = useState<TabKey>("dt_transfer")
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const router = useRouter()
+  useEffect(() => {
+    fetchLastUpdate()
+    fetchData()
+  }, [activeTab])
   const formatTime = (date: Date | null) => {
     if (!date) return "-"
 
@@ -321,7 +409,44 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
       minute: "2-digit",
     })
   }
-  const [activeTab, setActiveTab] = useState<TabKey>("dt_transfer")
+  const fetchLastUpdate = async () => {
+  const { data } = await supabase
+      .from("system_logs")
+      .select("*")
+      .order("last_update", { ascending: false })
+      .limit(1)
+
+    if (data && data.length > 0) {
+      setLastUpdate(new Date(data[0].last_update))
+    }
+  }
+  const fetchData = async () => {
+  const table = getTableName(activeTab)
+
+  const { data, error, count } = await supabase
+    .from(table)
+    .select("*", { count: "exact" })
+    .range(0, 999)
+
+    if (error) {
+      console.error("Fetch error:", error)
+      return
+    }
+
+    if (data) {
+      setUploadStates((prev) => ({
+        ...prev,
+        [activeTab]: {
+          ...prev[activeTab],
+          data: data,
+          headers: Object.keys(data[0] || {}),
+          rowCount: count || 0,
+          status: "idle", // 🔥 JANGAN success
+          isFromUpload: false,
+        },
+      }))
+    }
+  }
   const [uploadStates, setUploadStates] = useState<Record<TabKey, UploadState>>(
     () =>
       Object.fromEntries(TABS.map((t) => [t.key, { ...initialUploadState }])) as Record<
@@ -473,6 +598,7 @@ const handleFileUpload = async (file: File) => {
         sheetName: sheetName,
         rowCount: reorderedData.length, // 🔥 INI YANG KURANG
         status: "success",
+        isFromUpload: true,
         errorMsg: "",
       },
     }))
@@ -496,11 +622,12 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   }
 }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setUploadStates((prev) => ({
       ...prev,
       [activeTab]: { ...initialUploadState },
     }))
+    await fetchData()
   }
 
   const activeTabConfig = TABS.find((t) => t.key === activeTab)!
@@ -511,11 +638,35 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     (currentPage_ - 1) * ROWS_PER_PAGE,
     currentPage_ * ROWS_PER_PAGE
   )
-
+  
   // Summary stats
-  const uploadedTabs = TABS.filter((t) => uploadStates[t.key].status === "success").length
+  const uploadedTabs = TABS.filter((t) => uploadStates[t.key].isFromUpload).length
 
+  const getKey = (tab: TabKey, row: any) => {
+  switch (tab) {
+    case "logix":
+      return row.nomor_ticket
+
+    case "coda":
+      return row.doc_no
+
+    case "dt_transfer":
+      return `${row.kode_subdist}-${row.periode}-${row.week}`
+
+    default:
+      return JSON.stringify(row)
+  }
+}
   const sendToDatabase = async () => {
+
+    const hasUpload = Object.values(uploadStates).some(
+      (s) => s.isFromUpload
+    )
+
+    if (!hasUpload) {
+      alert("❌ Belum ada file yang diupload")
+      return
+    }
     try {
       setIsSending(true)
       setProgress(0)
@@ -531,12 +682,29 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       })
 
       for (const [tab, state] of Object.entries(uploadStates)) {
+        const table = getTableName(tab as TabKey)
+
+        // ambil data lama
+        const { data: existingData } = await supabase
+          .from(table)
+          .select("*")
         if (state.status !== "success") continue
 
         const data = mapDataByTab(tab as TabKey, state.data)
+        const existingKeys = new Set(
+          (existingData || []).map((row) => getKey(tab as TabKey, row))
+        )
 
-        for (let i = 0; i < data.length; i += 500) {
-          const chunk = data.slice(i, i + 500)
+        const newData = data.filter(
+          (row) => !existingKeys.has(getKey(tab as TabKey, row))
+        )
+
+        if (newData.length === 0) {
+          console.log(`⚠️ ${tab} tidak ada data baru`)
+          continue
+        }
+        for (let i = 0; i < newData.length; i += 500) {
+          const chunk = newData.slice(i, i + 500)
 
           console.log("Sending:", tab, chunk.length)
 
@@ -567,10 +735,20 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           processed += chunk.length
           const percent = Math.round((processed / totalRows) * 100)
           setProgress(percent)
+
+          setUploadStates((prev) =>
+            Object.fromEntries(
+              Object.entries(prev).map(([k]) => [
+                k,
+                { ...initialUploadState },
+              ])
+            ) as Record<TabKey, UploadState>
+          )
         }
       }
 
       alert("✅ Data berhasil dikirim ke database")
+      await fetchData()
     } catch (err: any) {
       console.error("FINAL ERROR:", err)
       alert(`❌ ${err.message}`)
@@ -578,6 +756,9 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setIsSending(false)
     }
     setLastUpdate(new Date())
+    await supabase.from("system_logs").insert({
+      last_update: new Date().toISOString(),
+    })
   }
 
   const formatDateTime = (date: Date | null) => {
@@ -594,6 +775,30 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const [isSending, setIsSending] = useState(false)
   const [progress, setProgress] = useState(0)
   const isAllUploaded = uploadedTabs === TABS.length
+    useEffect(() => {
+  const channel = supabase
+    .channel("realtime-db")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: getTableName(activeTab),
+      },
+      () => {
+        console.log("Realtime update detected 🚀")
+        fetchData()
+        fetchLastUpdate()
+      }
+    )
+    .subscribe()
+
+    fetchData()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}, [activeTab])
   return (
     <div className="space-y-6">
       {/* BANNER */}
@@ -639,8 +844,6 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             <span>
               {lastUpdate ? formatTime(lastUpdate) : "Belum update"}
             </span>
-
-            <span>{formatTime(lastUpdate)}</span>
           </div>
           <button
             disabled={!isAllUploaded}
