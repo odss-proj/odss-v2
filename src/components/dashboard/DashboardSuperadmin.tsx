@@ -6,6 +6,9 @@ import * as XLSX from "xlsx"
 import Banner from "../layout/banner"
 import { supabase } from "../../lib/supabase"
 
+
+
+
 type TabKey = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
 
 type TabConfig = {
@@ -16,6 +19,71 @@ type TabConfig = {
   activeColor: string
   description: string
 }
+
+const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
+  own_cloud: [
+    "KODE SUBDIST","NAMA SUBDIST","DIVISI","TERITORY","AREA","GRSM","REGION",
+    "TAHUN","PERIODE","WEEK","KPI","% KEL H+3","% KEL H+7","% Ach",
+    "TOTAL SELISIH","KETERANGAN","ASSH","TAS"
+  ],
+
+  dt_transfer: [
+    "Kode Subdist",
+    "Kd Plan",
+    "Nama Subdist",
+    "COVER",
+    "PIC",
+    "BAS",
+    "ASSH",
+    "Area",
+    "TAHUN",
+    "PERIODE",
+    "WEEK",
+    "KPI",
+    "% ACH"
+  ],
+
+  // 🔥 monitoring_wf ternyata sama dengan DT (dari screenshot kamu)
+  monitoring_wf: [
+    "SUBDIS_ID","SUBDIS_NAME","DIVISI","TYPE","KOTA","REGION","TAS",
+    "RELEASE","TGL TRANSFER TERAKHIR","LAMA","cut off","Pekan","Prosentase"
+  ],
+
+  logix: [
+    "date_logs","email","id_user","user","kd_branch","branch","pic_branch",
+    "nomor_ticket","ticket_created_date","ticket_created_detail",
+    "ticket_created_in_s","severity","type_supporting","sub_type_supporting",
+    "detail_issue","aplikasi","modul","menu","status_ticket","last_state",
+    "ticket_close_date","ticket_close_detail","ticket_close_in_s",
+    "ticket_durasi","ticket_durasi_in_s","default_respon_time",
+    "default_respon_time_by_severity","tas_pic","tas_respon_time",
+    "tas_respon_time_in_s","br_pic","br_respon_time","br_respon_time_in_s",
+    "dev_pic","dev_respon_time","dev_respon_time_in_s","durasi_ticket_hari",
+    "ticket_created_month","date_extract","ticket_in_s","judul_ticket",
+    "deskripsi_ticket","note_br","fileset","solved_by"
+  ],
+
+  coda: [
+    "Flag Report","Req. Type","Year Request","Quartal","Application","APPX",
+    "Doc. Date","Doc. Type","Doc. No.","Doc. Name","Description",
+    "Status Dev","Status Project","User","User Request","Project",
+    "BR PIC","Task PIC_2","Testing PIC 1","Testing PIC 2","Testing PIC 3",
+    "Dev PIC","Pilot","Release","Year Done","Bobot Dokumen",
+    "Bobot Testing PIC 1","Bobot Testing PIC 2","Bobot Testing PIC 3",
+    "YearDone2","Bobot Test2 2025","Test2 Done 2025",
+    "Bobot Test3 2025","Test3 Done 2025",
+    "Bobot Test1 2026","Test1 Done 2026",
+    "Bobot Test2 2026","Test2 Done 2026",
+    "Bobot Test3 2026","Test3 Done 2026",
+
+    // 🔥 tambahan dari Master PIC
+    "Dept",
+    "Sub-Dept"
+  ]
+}
+
+const normalize = (str: string) =>
+  str.toLowerCase().replace(/\s+/g, "").trim()
 
 const TABS: TabConfig[] = [
   {
@@ -104,69 +172,158 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     router.push("/login")
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+const handleFileUpload = async (file: File) => {
+  try {
+    setUploadStates((prev) => ({
+      ...prev,
+      [activeTab]: {
+        ...prev[activeTab],
+        status: "loading",
+        errorMsg: undefined,
+      },
+    }))
 
-    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      setUploadStates((prev) => ({
-        ...prev,
-        [activeTab]: {
-          ...initialUploadState,
-          status: "error",
-          errorMsg: "Format file tidak valid. Gunakan .xlsx, .xls, atau .csv",
-        },
-      }))
-      return
+    const data = await file.arrayBuffer()
+    const workbook = XLSX.read(data)
+
+    let jsonData: Record<string, any>[] = []
+    let sheetName = ""
+
+    if (activeTab === "coda") {
+      // =========================
+      // 🔥 CODA SPECIAL LOGIC
+      // =========================
+
+      const sourceSheet = workbook.Sheets["Source 2025 + 2026.W15"]
+      const masterSheet = workbook.Sheets["Master PIC"]
+
+      if (!sourceSheet || !masterSheet) {
+        throw new Error("Sheet CODA tidak lengkap (butuh Source & Master PIC)")
+      }
+
+      const sourceData = XLSX.utils.sheet_to_json<Record<string, any>>(sourceSheet, {
+        defval: null,
+      })
+
+      const masterData = XLSX.utils.sheet_to_json<Record<string, any>>(masterSheet, {
+        defval: null,
+      })
+
+      // normalize helper
+      const normalizeText = (str: string) =>
+        str?.toLowerCase().trim()
+
+      // mapping PIC
+      const picMap: Record<string, any> = {}
+
+      masterData.forEach((row) => {
+        const pic = normalizeText(row["PIC"])
+        if (pic) {
+          picMap[pic] = {
+            dept: row["Dept."],
+            subDept: row["Sub-Dept"],
+          }
+        }
+      })
+
+      // merge data
+      jsonData = sourceData.map((row) => {
+        const pic = normalizeText(row["PIC"])
+        const extra = picMap[pic] || {}
+
+        return {
+          ...row,
+          Dept: extra.dept || null,
+          "Sub-Dept": extra.subDept || null,
+        }
+      })
+
+      sheetName = "Merged CODA"
+    } else {
+      // =========================
+      // DEFAULT (SEMUA TAB LAIN)
+      // =========================
+      sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+
+      jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+        defval: null,
+      })
     }
+
+    if (!jsonData) {
+      throw new Error("File tidak valid")
+    }
+
+    const headers = jsonData.length > 0
+      ? Object.keys(jsonData[0])
+      : []
+
+    const safeData = jsonData.length ? jsonData : []
+
+    const expectedHeaders = TEMPLATE_HEADERS[activeTab]
+
+    if (!expectedHeaders) {
+      throw new Error("Template tab tidak ditemukan")
+    }
+
+    const normalizedHeaders = headers.map(normalize)
+    const normalizedExpected = expectedHeaders.map(normalize)
+
+    const missingHeaders = normalizedExpected.filter(
+      (h) => !normalizedHeaders.includes(h)
+    )
+
+    if (missingHeaders.length > 0) {
+      throw new Error(
+        `Kolom tidak sesuai: ${missingHeaders.join(", ")}`
+      )
+    }
+
+    const reorderedData = jsonData.map((row) => {
+      const newRow: Record<string, any> = {}
+
+      expectedHeaders.forEach((header) => {
+        const foundKey = Object.keys(row).find(
+          (k) => normalize(k) === normalize(header)
+        )
+        newRow[header] = foundKey ? row[foundKey] : null
+      })
+
+      return newRow
+    })
 
     setUploadStates((prev) => ({
       ...prev,
-      [activeTab]: { ...initialUploadState, status: "loading", fileName: file.name },
+      [activeTab]: {
+        fileName: file.name,
+        data: reorderedData,
+        headers: expectedHeaders,
+        sheetName: sheetName,
+        rowCount: reorderedData.length, // 🔥 INI YANG KURANG
+        status: "success",
+        errorMsg: "",
+      },
     }))
-
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const data = ev.target?.result
-        const workbook = XLSX.read(data, { type: "binary" })
-        const sheetName = workbook.SheetNames[0]
-        const sheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-          defval: "",
-        })
-        const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : []
-
-        setUploadStates((prev) => ({
-          ...prev,
-          [activeTab]: {
-            fileName: file.name,
-            data: jsonData,
-            headers,
-            sheetName,
-            rowCount: jsonData.length,
-            status: "success",
-            errorMsg: "",
-          },
-        }))
-        setCurrentPage((prev) => ({ ...prev, [activeTab]: 1 }))
-      } catch {
-        setUploadStates((prev) => ({
-          ...prev,
-          [activeTab]: {
-            ...initialUploadState,
-            status: "error",
-            fileName: file.name,
-            errorMsg: "Gagal membaca file. Pastikan format file valid.",
-          },
-        }))
-      }
-    }
-    reader.readAsBinaryString(file)
-
-    // Reset input so same file can be re-uploaded
-    if (fileInputRef.current) fileInputRef.current.value = ""
+  } catch (error: any) {
+    setUploadStates((prev) => ({
+      ...prev,
+      [activeTab]: {
+        ...initialUploadState,
+        status: "error",
+        fileName: file.name,
+        errorMsg: error.message,
+      },
+    }))
   }
+}
+
+const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    handleFileUpload(file)
+  }
+}
 
   const handleReset = () => {
     setUploadStates((prev) => ({
@@ -187,6 +344,73 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
   // Summary stats
   const uploadedTabs = TABS.filter((t) => uploadStates[t.key].status === "success").length
 
+  const sendToDatabase = async () => {
+    try {
+      setIsSending(true)
+      setProgress(0)
+
+      let totalRows = 0
+      let processed = 0
+
+      // hitung total dulu
+      Object.values(uploadStates).forEach((s) => {
+        if (s.status === "success") {
+          totalRows += s.data.length
+        }
+      })
+
+      for (const [tab, state] of Object.entries(uploadStates)) {
+        if (state.status !== "success") continue
+
+        const data = state.data
+
+        for (let i = 0; i < data.length; i += 500) {
+          const chunk = data.slice(i, i + 500)
+
+          console.log("Sending:", tab, chunk.length)
+
+          const res = await fetch(
+            "https://jytxkqhuwtnmbycxkzdv.functions.supabase.co/upload-data",
+            {
+              method: "POST",
+              mode: "cors",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+              },
+              body: JSON.stringify({
+                table: tab,
+                data: chunk,
+              }),
+            }
+          )
+
+          const result = await res.json()
+
+          if (!res.ok) {
+            console.error("ERROR:", result)
+            throw new Error(result.error || "Unknown error")
+          }
+
+          processed += chunk.length
+          const percent = Math.round((processed / totalRows) * 100)
+          setProgress(percent)
+        }
+      }
+
+      alert("✅ Data berhasil dikirim ke database")
+    } catch (err: any) {
+      console.error("FINAL ERROR:", err)
+      alert(`❌ ${err.message}`)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const [isSending, setIsSending] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const isAllUploaded = uploadedTabs === TABS.length
   return (
     <div className="space-y-6">
       {/* BANNER */}
@@ -216,19 +440,20 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
           })}
         </div>
 
-        {/* User info + Logout */}
+        {/* Button Send DB */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border px-3 py-2 rounded-xl text-sm">
-            <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-              SA
-            </div>
-            <span className="font-medium text-gray-700">{userName}</span>
-          </div>
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 border border-red-100"
+            disabled={!isAllUploaded}
+            onClick={sendToDatabase}
+            
+            className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition
+              ${
+                isAllUploaded
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
           >
-            <span>🚪</span> Logout
+            {isAllUploaded ? "🚀 Send to DB" : `⏳ Upload ${uploadedTabs}/${TABS.length}`}
           </button>
         </div>
       </div>
@@ -256,7 +481,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
             <p className="text-sm text-gray-400">Total Rows</p>
             <h2 className="text-2xl font-bold">
               {Object.values(uploadStates)
-                .reduce((a, s) => a + s.rowCount, 0)
+                .reduce((a, s) => a +(s.rowCount || 0), 0)
                 .toLocaleString()}
             </h2>
             <p className="text-xs text-gray-400">Semua modul</p>
@@ -304,13 +529,13 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               : "border-gray-200 bg-gray-50 hover:border-green-300 hover:bg-green-50"
             }`}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
 
           {currentState.status === "loading" && (
             <div className="flex flex-col items-center gap-2">
@@ -334,7 +559,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               <div className="flex gap-4 text-xs text-gray-500">
                 <span>📄 Sheet: <strong>{currentState.sheetName}</strong></span>
                 <span>📊 Kolom: <strong>{currentState.headers.length}</strong></span>
-                <span>📝 Baris: <strong>{currentState.rowCount.toLocaleString()}</strong></span>
+                <span>📝 Baris: <strong>{(currentState.rowCount || 0).toLocaleString()}</strong></span>
               </div>
               <p className="text-xs text-green-500">Klik untuk ganti file</p>
             </div>
@@ -360,8 +585,8 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 Menampilkan {(currentPage_ - 1) * ROWS_PER_PAGE + 1}–
-                {Math.min(currentPage_ * ROWS_PER_PAGE, currentState.rowCount)} dari{" "}
-                {currentState.rowCount.toLocaleString()} baris
+                {Math.min(currentPage_ * ROWS_PER_PAGE, currentState.rowCount || 0)} dari{" "}
+                {(currentState.rowCount || 0).toLocaleString()} baris
               </p>
             </div>
 
@@ -472,6 +697,35 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
           </p>
         </div>
       )}
+        <div className="space-y-6">
+    {/* semua UI kamu */}
+
+        {/* ⬇️ TARUH DI SINI (PALING BAWAH) */}
+        {isSending && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-[320px] shadow-xl text-center">
+              <div className="text-3xl mb-2">🚀</div>
+              <h2 className="font-semibold text-gray-800 mb-2">
+                Mengirim Data ke Database
+              </h2>
+
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                <div
+                  className="bg-green-500 h-3 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <p className="text-sm text-gray-600">
+                {progress}% selesai
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
+
+    
+    
   )
 }
