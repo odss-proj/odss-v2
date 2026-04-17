@@ -16,7 +16,7 @@ export default function DevPage() {
 
       if (role === "MDM")  router.push("/dashboard/mdm")
       if (role === "APPC") router.push("/dashboard/appc")
-      if (role === "APPT") router.push("/dashboard/appt")
+      if (role === "APPT") router.push("/dashboard/apps")
     }
 
     checkRole()

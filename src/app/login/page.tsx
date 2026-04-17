@@ -49,11 +49,12 @@ export default function LoginPage() {
 
       if (role === "MDM") router.push("/dashboard/mdm")
       else if (role === "APPC") router.push("/dashboard/appc")
-      else if (role === "APPT") router.push("/dashboard/appt")
+      else if (role === "SH-APPS") router.push("/dashboard/apps")
       else if (role === "APPG") router.push("/dashboard/appg")
       else if (role === "BR") router.push("/dashboard/br")
       else if (role === "DEV") router.push("/dashboard/dev")
       else if (role === "SUPERADMIN") router.push("/superadmin")
+      else if (role === "SH-APPS") router.push("/dashboard/apps")
     }
 
     setLoading(false)

@@ -75,7 +75,7 @@ export default function RegisterPage() {
           <option value="">Pilih Role</option>
           <option value="MDM">MDM</option>
           <option value="APPC">APPC</option>
-          <option value="APPT">APPT</option>
+          <option value="SH-APPS">SH-APPS</option>
           <option value="APPG">APPG</option>
           <option value="BR">BR</option>
           <option value="DEV">DEV</option>
