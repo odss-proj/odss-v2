@@ -93,7 +93,6 @@ export default function LoginPage() {
         <input
           className="w-full mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
           placeholder="Masukkan username Anda"
-          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={handleKeyDown}
