@@ -73,6 +73,8 @@ function getStatusColor(status: string) {
   return STATUS_COLORS[status] || "bg-gray-100 text-gray-600"
 }
 
+type PicStat = { pic: string; total: number; done: number; progress: number; open: number; blocked: number; rate: number }
+
 export default function CodaBacklogView() {
   const [data, setData] = useState<CodaRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -162,19 +164,20 @@ export default function CodaBacklogView() {
   const doneRate = total > 0 ? doneCount / total : 0
 
   // By PIC (tim APPS)
-  const picStats = APPS_TEAM.map((pic) => {
+  const picStats: PicStat[] = APPS_TEAM.reduce<PicStat[]>((acc, pic) => {
     const rows = filtered.filter((r) => r.pic_name === pic)
-    if (rows.length === 0) return null
-    return {
+    if (rows.length === 0) return acc
+    acc.push({
       pic,
       total: rows.length,
       done: rows.filter((r) => getStatusGroup(r.status_dev) === "done").length,
       progress: rows.filter((r) => getStatusGroup(r.status_dev) === "progress").length,
       open: rows.filter((r) => getStatusGroup(r.status_dev) === "open").length,
       blocked: rows.filter((r) => getStatusGroup(r.status_dev) === "blocked").length,
-      rate: rows.length > 0 ? rows.filter((r) => getStatusGroup(r.status_dev) === "done").length / rows.length : 0,
-    }
-  }).filter(Boolean).sort((a, b) => b!.total - a!.total) as NonNullable<ReturnType<typeof APPS_TEAM.map>[number]>[]
+      rate: rows.filter((r) => getStatusGroup(r.status_dev) === "done").length / rows.length,
+    })
+    return acc
+  }, []).sort((a, b) => b.total - a.total)
 
   // By Application
   const apps = [...new Set(filtered.map((r) => r.application).filter(Boolean))]
