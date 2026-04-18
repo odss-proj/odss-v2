@@ -49,23 +49,21 @@ export default function LoginPage() {
       const role = profile.role?.toUpperCase()
       console.log("ROLE:", role)
 
-      // 🔥 REDIRECT BERDASARKAN ROLE
       if (role === "MDM") router.push("/dashboard/mdm")
       else if (role === "APPC") router.push("/dashboard/appc")
-      else if (role === "APPT") router.push("/dashboard/appt")
+      else if (role === "SH-APPS") router.push("/dashboard/apps")
       else if (role === "APPG") router.push("/dashboard/appg")
       else if (role === "BR") router.push("/dashboard/br")
       else if (role === "DEV") router.push("/dashboard/dev")
+      else if (role === "SUPERADMIN") router.push("/superadmin")
+      else if (role === "SH-APPS") router.push("/dashboard/apps")
     }
 
     setLoading(false)
   }
 
-  // ✅ FIX 1: Handle Enter key press to trigger login
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleLogin()
-    }
+    if (e.key === "Enter") handleLogin()
   }
 
   return (
@@ -95,6 +93,8 @@ export default function LoginPage() {
         <input
           className="w-full mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
           placeholder="Masukkan username Anda"
+          className="w-full mb-3 p-2 border rounded"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={handleKeyDown}

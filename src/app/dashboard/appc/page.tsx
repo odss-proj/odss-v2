@@ -16,7 +16,7 @@ export default function APPCPage() {
 
       if (role !== "APPC") {
         if (role === "MDM") router.push("/dashboard/mdm")
-        if (role === "APPT") router.push("/dashboard/appt")
+        if (role === "APPT") router.push("/dashboard/apps")
       }
     }
 

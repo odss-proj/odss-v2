@@ -55,7 +55,7 @@ export default function MDMPage() {
       if (!role) return
       if (role !== "MDM") {
         if (role === "APPC") router.push("/dashboard/appc")
-        if (role === "APPT") router.push("/dashboard/appt")
+        if (role === "APPT") router.push("/dashboard/apps")
       }
     }
     checkRole()
