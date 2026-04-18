@@ -73,7 +73,7 @@ export default function LoginPage() {
         {/* ✅ FIX 2: ODSS Logo */}
         <div className="flex justify-center mb-6">
           <Image
-            src="/images/logo_odss.png"
+            src="/images/logo_odss.svg"
             alt="Logo ODSS"
             width={180}
             height={80}
@@ -93,7 +93,6 @@ export default function LoginPage() {
         <input
           className="w-full mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
           placeholder="Masukkan username Anda"
-          className="w-full mb-3 p-2 border rounded"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
