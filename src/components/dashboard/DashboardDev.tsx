@@ -357,7 +357,7 @@ export default function DashboardDev() {
                 <BarChart data={appChart} layout="vertical" margin={{ left: 20, right: 10 }}>
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
-                  <Tooltip formatter={(v: number) => [`${v} dok`, "Total"]} />
+                  <Tooltip formatter={(v: unknown) => [`${v} dok`, "Total"]} />
                   <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                     {appChart.map((_, i) => <Cell key={i} fill={meta.color} fillOpacity={1 - i * 0.07} />)}
                   </Bar>
@@ -452,7 +452,7 @@ export default function DashboardDev() {
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie data={backlogStatusChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                    label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                     {backlogStatusChart.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
@@ -519,7 +519,7 @@ export default function DashboardDev() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="sprint" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                <Tooltip formatter={(v: number) => [`${v}%`, "SFR"]} />
+                <Tooltip formatter={(v: unknown) => [`${String(v)}%`, "SFR"]} />
                 <Line type="monotone" dataKey="sfr" stroke={meta.color} strokeWidth={3}
                   dot={{ fill: meta.color, r: 5 }} activeDot={{ r: 7 }} />
               </LineChart>
@@ -672,7 +672,7 @@ export default function DashboardDev() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="pic" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
                 <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                <Tooltip formatter={(v: number) => [`${v}%`, "OTD Rate"]} />
+                <Tooltip formatter={(v: unknown) => [`${String(v)}%`, "OTD Rate"]} />
                 <Bar dataKey="otd" name="OTD %" radius={[6,6,0,0]}>
                   {picStats.filter(p => p.total >= 5).map((p, i) => (
                     <Cell key={i} fill={pct(p.ontime, p.total) >= 70 ? "#22c55e" : pct(p.ontime, p.total) >= 50 ? "#f59e0b" : "#ef4444"} />

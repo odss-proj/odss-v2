@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from "xlsx"
-import Banner from "../layout/banner"
 import { supabase } from "../../lib/supabase"
 
-type AppsTabKey = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
-type DevTabKey  = "dev_coda" | "dev_sprint" | "dev_backlog"
-type TabKey     = AppsTabKey | DevTabKey
-type Section    = "apps" | "dev"
+type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix" | "area_cover"
+type DevTabKey    = "dev_coda" | "dev_sprint" | "dev_backlog"
+type GlobalTabKey = "global_backup" | "global_restore" | "global_backlog" | "global_pilot" | "global_vm"
+type TabKey       = AppsTabKey | DevTabKey | GlobalTabKey
+type Section      = "apps" | "dev" | "global"
 
 type TabConfig = {
   key: TabKey; label: string; icon: string
@@ -55,11 +55,17 @@ const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim()
 
 const getTableName = (tab: TabKey): string => {
   switch (tab) {
-    case "coda":       return "coda_main"
-    case "dev_coda":   return "data_source_coda"
-    case "dev_sprint": return "data_source_dev_sprint"
-    case "dev_backlog": return "data_source_project_backlog"
-    default:           return tab
+    case "coda":           return "coda_main"
+    case "area_cover":     return "area_cover_cns"
+    case "dev_coda":       return "data_source_coda"
+    case "dev_sprint":     return "data_source_dev_sprint"
+    case "dev_backlog":    return "data_source_project_backlog"
+    case "global_backup":  return "global_backup"
+    case "global_restore": return "global_restore"
+    case "global_backlog": return "global_backlog"
+    case "global_pilot":   return "global_vm_monitoring"
+    case "global_vm":      return "area_cover_cns"
+    default:               return tab
   }
 }
 
@@ -184,6 +190,121 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       flag_sprint: str(r["Flag Sprint"]), flag_tracking: str(r["Flag Tracking"]),
       weekly_sprint: str(r["Weekly Sprint"]), remark: str(r["Remark"]),
     }))
+    case "area_cover": return data.map((r) => ({
+      status:           str(r["STATUS"]),
+      kode_subdist:     num(r["Kode Subdist"]),
+      kd_plan:          str(r["Kd Plan"]),
+      nama_subdist:     str(r["Nama Subdist"]),
+      cover:            str(r["COVER"]),
+      pic:              str(r["PIC"]),
+      bas:              str(r["BAS"]),
+      assh:             str(r["ASSH"]),
+      area:             str(r["Area"]),
+      type:             str(r["Type"]),
+      divisi:           str(r["Divisi"]),
+      reg_rom:          str(r["REG/ROM"]),
+      vm:               str(r["VM"]),
+      schema_name:      str(r["Schema"]),
+      db_utama:         str(r["DB Utama"]),
+      salesman_non_sfa: num(r["SALESMAN NON SFA"]),
+      salesman_sfa:     num(r["SALESMAN SFA"]),
+      user_ficom:       num(r["USER"]),
+      jmlh_faktur_lm:   num(r["Jmlh Faktur LM"]),
+      size_datafile_gb: num(r["Size Datafile in GB"]),
+      total_salesman:   num(r["Total Salesman"]),
+      drive_vm:         str(r["Drive VM"]),
+      bom:              str(r["BOM"]),
+      region:           str(r["REGION"]),
+      rom:              str(r["ROM"]),
+      nom:              str(r["NOM"]),
+      cabang:           str(r["CABANG"]),
+      bom_aos_aom:      str(r["BOM/AOS/AOM"]),
+      salesman_count:   num(r["SALESMAN"]),
+      user_count:       num(r["USER (CNS)"]),
+      size_db:          num(r["SIZE DB"]),
+    }))
+    case "global_backup": return data.map((r) => {
+      // Hitung dari WEEK 1-52
+      const weekKeys = Array.from({length:52}, (_,i) => `WEEK ${i+1}`)
+      const done = weekKeys.filter(w => r[w] !== null && r[w] !== undefined && r[w] !== "").length
+      let latestWeek: string | null = null
+      for (let i = 52; i >= 1; i--) {
+        if (r[`WEEK ${i}`] !== null && r[`WEEK ${i}`] !== undefined && r[`WEEK ${i}`] !== "") {
+          latestWeek = `WEEK ${i}`; break
+        }
+      }
+      return {
+        adp_code: num(r["NO"]),
+        aor: str(r["AOR"]), server: num(r["SERVER"]),
+        adp_name: str(r["ADP NAME"]), support: str(r["SUPPORT"]),
+        db_schema: str(r["DB SCHEMA"]), db_utama: str(r["DB UTAMA"]),
+        total_backup_done: done, total_weeks: 52,
+        backup_completion_pct: Math.round(done / 52 * 100 * 10) / 10,
+        latest_week_backup: latestWeek,
+      }
+    })
+    case "global_restore": return data.map((r) => ({
+      no: num(r["NO"]), area: str(r["AREA"]), server: num(r["Server"]),
+      adp_code: num(r["ADP CODE"]), adp_name: str(r["ADP NAME"]),
+      month: parseDate(r["MONTH"]), restore_date: str(r["RESTORE DATE"]),
+      trans_date: parseDate(r["TRANS DATE"]), backup_size: str(r["BACKUP SIZE"]),
+      backup_tools_version: str(r["BACKUP TOOLS VERSION"]),
+      restore_status: str(r["RESTORE STATUS"]),
+      pic_restore: str(r["PIC RESTORE"]), pic_phi: str(r["PIC PHI"]),
+    }))
+    case "global_backlog": return data.map((r) => ({
+      no: num(r["No."]),
+      category: str(Object.values(r)[0]),  // kolom pertama (kolom tanpa nama)
+      concern: str(r["Concern"]),
+      remark: str(r["Remark"]),
+      concern_pic: str(r["Concern PIC"]),
+      app: str(r["App"]), type: str(r["Type"]), priority: num(r["Priority"]),
+      status: str(r["Status"]), note: str(r["Note"]),
+      no_document: str(r["No Document"]), pic_request: str(r["PIC Request"]),
+    }))
+    case "global_pilot": return data.map((r) => ({
+      vm: str(r["VM"]), drive: str(r["Drive"]),
+      total_gb: num(r["Total (GB)"]), free_gb: num(r["Free (GB)"]),
+      used_gb: num(r["Used (GB)"]), used_pct: num(r["Used %"]),
+      update_date: "2026-04-20",
+      w1:  num(r["W1"]),  w2:  num(r["W2"]),  w3:  num(r["W3"]),  w4:  num(r["W4"]),
+      w5:  num(r["W5"]),  w6:  num(r["W6"]),  w7:  num(r["W7"]),  w8:  num(r["W8"]),
+      w9:  num(r["W9"]),  w10: num(r["W10"]), w11: num(r["W11"]), w12: num(r["W12"]),
+      w13: num(r["W13"]), w14: num(r["W14"]), w15: num(r["W15"]), w16: num(r["W16"]),
+    }))
+    case "global_vm": return data.map((r) => ({
+      status:           str(r["STATUS"]),
+      kode_subdist:     num(r["Kode Subdist"]),
+      kd_plan:          str(r["Kd Plan"]),
+      nama_subdist:     str(r["Nama Subdist"]),
+      cover:            str(r["COVER"]),
+      pic:              str(r["PIC"]),
+      bas:              str(r["BAS"]),
+      assh:             str(r["ASSH"]),
+      area:             str(r["Area"]),
+      type:             str(r["Type"]),
+      divisi:           str(r["Divisi"]),
+      reg_rom:          str(r["REG/ROM"]),
+      vm:               str(r["VM"]),
+      schema_name:      str(r["Schema"]),
+      db_utama:         str(r["DB Utama"]),
+      salesman_non_sfa: num(r["SALESMAN NON SFA"]),
+      salesman_sfa:     num(r["SALESMAN SFA"]),
+      user_ficom:       num(r["USER"]),
+      jmlh_faktur_lm:   num(r["Jmlh Faktur LM"]),
+      size_datafile_gb: num(r["Size Datafile in GB"]),
+      total_salesman:   num(r["Total Salesman"]),
+      drive_vm:         str(r["Drive VM"]),
+      bom:              str(r["BOM"]),
+      region:           str(r["REGION"]),
+      rom:              str(r["ROM"]),
+      nom:              str(r["NOM"]),
+      cabang:           str(r["CABANG"]),
+      bom_aos_aom:      str(r["BOM/AOS/AOM"]),
+      salesman_count:   num(r["SALESMAN"]),
+      user_count:       num(r["USER (CNS)"]),
+      size_db:          num(r["SIZE DB"]),
+    }))
     default: return data
   }
 }
@@ -196,6 +317,12 @@ const getKey = (tab: TabKey, row: Record<string, unknown>): string => {
     case "dev_coda":   return `${row.doc_name}-${row.dev_pic}-${row.year_dev}`
     case "dev_sprint": return `${row.sprint}-${row.product_backlog}-${row.dev_pic_pb}`
     case "dev_backlog": return `${row.request}-${row.dev_sprint}-${row.pic_dev}`
+    case "area_cover":    return `${row.kode_subdist}`
+    case "global_backup":  return `${row.adp_code}-${row.server}`
+    case "global_restore": return `${row.adp_code}-${row.month}`
+    case "global_backlog": return `${row.no}-${row.concern}`
+    case "global_pilot":   return `${row.vm}-${row.drive}`
+    case "global_vm":      return `${row.kode_subdist}`
     default:           return JSON.stringify(row)
   }
 }
@@ -206,9 +333,21 @@ const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
   monitoring_wf: ["SUBDIS_ID","SUBDIS_NAME","DIVISI","TYPE","KOTA","REGION","TAS","RELEASE","TGL TRANSFER TERAKHIR","LAMA","cut off","Pekan","Prosentase"],
   logix: ["date_logs","email","id_user","user","kd_branch","branch","pic_branch","nomor_ticket","ticket_created_date","ticket_created_detail","ticket_created_in_s","severity","type_supporting","sub_type_supporting","detail_issue","aplikasi","modul","menu","status_ticket","last_state","ticket_close_date","ticket_close_detail","ticket_close_in_s","ticket_durasi","ticket_durasi_in_s","default_respon_time","default_respon_time_by_severity","tas_pic","tas_respon_time","tas_respon_time_in_s","br_pic","br_respon_time","br_respon_time_in_s","dev_pic","dev_respon_time","dev_respon_time_in_s","durasi_ticket_hari","ticket_created_month","date_extract","ticket_in_s","judul_ticket","deskripsi_ticket","note_br","fileset","solved_by"],
   coda: ["Flag Report","Req. Type","Year Request","Quartal","Application","APPX","Doc. Date","Doc. Type","Doc. No.","Doc. Name","Description","Status Dev","Status Project","User","User Request","Project","BR PIC","Task PIC_2","Testing PIC 1","Testing PIC 2","Testing PIC 3","Dev PIC","Pilot","Release","Year Done","Bobot Dokumen","Bobot Testing PIC 1","Bobot Testing PIC 2","Bobot Testing PIC 3","YearDone2","Bobot Test2 2025","Test2 Done 2025","Bobot Test3 2025","Test3 Done 2025","Bobot Test1 2026","Test1 Done 2026","Bobot Test2 2026","Test2 Done 2026","Bobot Test3 2026","Test3 Done 2026","Dept","Sub-Dept"],
+  area_cover: [
+    "STATUS","Kode Subdist","Kd Plan","Nama Subdist","COVER","PIC","BAS","ASSH",
+    "Area","Type","Divisi","REG/ROM","VM","Schema","BOM","REGION","ROM","NOM",
+  ],
   dev_coda: ["ADOP Project Backlog","Project","Application","Year Dev","Year Done","Doc. Type","Doc. Name","Tshirt Sizing","Dev. Point","Dev PIC","Status Dev","Work Complete","Start Date","Finish Date","Deadline","Pilot","Release","Test Cycle","Doc. Cycle","Year Request","Quartal","Doc. Date","User","User Request","Plan Pilot","Dev Sprint (DS)","Group Dev","Bobot Dokumen","appx","is_empty_deadline","is_empty_dev_point","is_empty_doc_point","Dev Point Bugs","flag_bugs","flag_on_time","flag_testing","flag_pilot","flag_done_dev"],
   dev_sprint: ["Sprint","ADOP Sprint","ADOP Project Backlog","Product Backlog","Sprint PIC","Dev PIC (PB)","Workload (PB)","Plan Start","Plan Finish","% Sprint","% Exp. Result","Is Plan","Status Dev (PB)","Tshirt Sizing (PB)","Dev. Point (PB)","Work Complete (PB)","Start Date (PB)","Finish Date (PB)","Deadline (PB)","Test Cycle (PB)","Doc. Cycle (PB)","is_empty_dev_point"],
   dev_backlog: ["User","Application","KPI","Request","Status SS","Status Project","Time Request","Deadline","Timeline","%Work Complete","PIC Dev","Dev Group","PIC BR","PIC Apps","Doc. Ref.","Status Dev","Review Sprint","Dev Sprint","ADOP Sprint","Weekly Report","Flag Sprint","Flag Tracking","Weekly Sprint","Remark"],
+  global_backup:  ["NO","AOR","SERVER","ADP NAME","SUPPORT","DB SCHEMA","DB UTAMA","WEEK 1","WEEK 2","WEEK 3","WEEK 4","WEEK 5","WEEK 6","WEEK 7","WEEK 8","WEEK 9","WEEK 10","WEEK 11","WEEK 12","WEEK 13","WEEK 14","WEEK 15","WEEK 16","WEEK 17","WEEK 18","WEEK 19","WEEK 20","WEEK 21","WEEK 22","WEEK 23","WEEK 24","WEEK 25","WEEK 26","WEEK 27","WEEK 28","WEEK 29","WEEK 30","WEEK 31","WEEK 32","WEEK 33","WEEK 34","WEEK 35","WEEK 36","WEEK 37","WEEK 38","WEEK 39","WEEK 40","WEEK 41","WEEK 42","WEEK 43","WEEK 44","WEEK 45","WEEK 46","WEEK 47","WEEK 48","WEEK 49","WEEK 50","WEEK 51","WEEK 52"],
+  global_restore: ["NO","AREA","Server","ADP CODE","ADP NAME","MONTH","RESTORE DATE","TRANS DATE","BACKUP SIZE","BACKUP TOOLS VERSION","RESTORE STATUS","PIC RESTORE","PIC PHI"],
+  global_backlog: ["No.","Concern","Remark","Concern PIC","App","Type","Priority","Status","Note","No Document","PIC Request"],
+  global_pilot:   ["VM","Drive","Total (GB)","Free (GB)","Used (GB)","Used %","W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16"],
+  global_vm: [
+    "STATUS","Kode Subdist","Kd Plan","Nama Subdist","COVER","PIC","BAS","ASSH",
+    "Area","Type","Divisi","REG/ROM","VM","Schema","BOM","REGION","ROM","NOM",
+  ],
 }
 
 const APPS_TABS: TabConfig[] = [
@@ -217,6 +356,7 @@ const APPS_TABS: TabConfig[] = [
   { key:"monitoring_wf",label:"Monitoring WF",  icon:"📊", color:"bg-gray-100 text-gray-600", activeColor:"bg-green-500 text-white",  description:"Monitoring workflow dan status pengerjaan",               section:"apps" },
   { key:"coda",         label:"Coda",           icon:"📋", color:"bg-gray-100 text-gray-600", activeColor:"bg-purple-500 text-white", description:"Upload dan sinkronisasi data dari Coda",                  section:"apps" },
   { key:"logix",        label:"Logix",          icon:"🚚", color:"bg-gray-100 text-gray-600", activeColor:"bg-orange-500 text-white", description:"Import data logistik dan pengiriman dari Logix",          section:"apps" },
+  { key:"area_cover",    label:"Area Cover CNS",  icon:"🗺️", color:"bg-gray-100 text-gray-600", activeColor:"bg-cyan-500 text-white",   description:"Upload Area_Cover_CNS_Merged.xlsx — gabungan Area Cover + BOM ROM NOM + List CNS Aktif", section:"apps" },
 ]
 
 const DEV_TABS: TabConfig[] = [
@@ -225,7 +365,15 @@ const DEV_TABS: TabConfig[] = [
   { key:"dev_backlog", label:"Data Source (Project Backlog)",icon:"📌", color:"bg-gray-100 text-gray-600", activeColor:"bg-orange-500 text-white", description:"Upload sheet 'Data Source (Project Backlog)' dari BiWeekly Report", section:"dev" },
 ]
 
-const ALL_TABS = [...APPS_TABS, ...DEV_TABS]
+const GLOBAL_TABS: TabConfig[] = [
+  { key:"global_backup",  label:"Backup PHI",          icon:"💾", color:"bg-gray-100 text-gray-600", activeColor:"bg-sky-500 text-white",    description:"Upload Global-Backup_PHI.xlsx — tracking backup per ADP per week",    section:"global" },
+  { key:"global_restore", label:"Restore PHI",          icon:"🔄", color:"bg-gray-100 text-gray-600", activeColor:"bg-teal-500 text-white",   description:"Upload Global-_Restore_PHI.xlsx — hasil DRP restore per ADP",         section:"global" },
+  { key:"global_backlog", label:"Backlog PHI",          icon:"📋", color:"bg-gray-100 text-gray-600", activeColor:"bg-emerald-500 text-white",description:"Upload Global-Backlog_PHI.xlsx — concern & backlog tracker",           section:"global" },
+  { key:"global_pilot",   label:"VM Monitoring",        icon:"📊", color:"bg-gray-100 text-gray-600", activeColor:"bg-violet-500 text-white", description:"Upload VM_Storage_Monitoring.xlsx — sheet VM Drive Detail",           section:"global" },
+  { key:"global_vm",      label:"Global Area CNS",      icon:"🗺️", color:"bg-gray-100 text-gray-600", activeColor:"bg-cyan-500 text-white",   description:"Upload Area_Cover_CNS_Merged.xlsx — gabungan Area Cover + BOM ROM NOM + List CNS Aktif", section:"global" },
+]
+
+const ALL_TABS = [...APPS_TABS, ...DEV_TABS, ...GLOBAL_TABS]
 
 const readFileForTab = async (tab: TabKey, file: File): Promise<{ jsonData: Record<string, unknown>[]; sheetName: string }> => {
   const buffer   = await file.arrayBuffer()
@@ -267,6 +415,26 @@ const readFileForTab = async (tab: TabKey, file: File): Promise<{ jsonData: Reco
     return { jsonData: cleaned, sheetName: workbook.SheetNames[0] }
   }
 
+  // Global tabs yang butuh sheet spesifik dari Monitoring_Size_DB_VM.xlsx
+  const globalSheetMap: Record<string, string> = {
+    global_pilot: "VM Drive Detail",
+  }
+  if (globalSheetMap[tab]) {
+    const targetSheet = globalSheetMap[tab]
+    // Coba sheet spesifik dulu, kalau tidak ada coba sheet pertama
+    const sheet = workbook.Sheets[targetSheet]
+    if (!sheet) {
+      // Fallback: baca sheet pertama (mungkin user upload file yang sudah dipisah)
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: null })
+      const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
+      return { jsonData: cleaned, sheetName: workbook.SheetNames[0] }
+    }
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null })
+    const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
+    return { jsonData: cleaned, sheetName: targetSheet }
+  }
+
   const sheetName = workbook.SheetNames[0]
   const jsonData  = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: null })
   return { jsonData, sheetName }
@@ -289,7 +457,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     () => Object.fromEntries(ALL_TABS.map((t) => [t.key, 1])) as Record<TabKey, number>
   )
 
-  const TABS        = section === "apps" ? APPS_TABS : DEV_TABS
+  const TABS        = section === "apps" ? APPS_TABS : section === "dev" ? DEV_TABS : GLOBAL_TABS
   const sectionTabs = TABS
 
   // Listen section change event dari sidebar layout
@@ -297,7 +465,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     const handler = (e: Event) => {
       const s = (e as CustomEvent<Section>).detail
       setSection(s)
-      setActiveTab(s === "apps" ? "dt_transfer" : "dev_coda")
+      if (s === "apps") setActiveTab("dt_transfer"); else if (s === "dev") setActiveTab("dev_coda"); else setActiveTab("global_backup")
     }
     window.addEventListener("superadmin-section", handler)
     return () => window.removeEventListener("superadmin-section", handler)
@@ -411,7 +579,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
         sectionTabs.forEach((t) => { next[t.key] = { ...initialUploadState } })
         return next
       })
-      alert(`✅ Data ${section === "apps" ? "APPS" : "Developer"} berhasil dikirim ke database`)
+      alert(`✅ Data ${section === "apps" ? "APPS" : section === "dev" ? "Developer" : "Global PHI"} berhasil dikirim ke database`)
       await fetchData()
     } catch (err: unknown) {
       alert(`❌ ${err instanceof Error ? err.message : "Unknown error"}`)
@@ -434,7 +602,10 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
 
   return (
     <div className="space-y-6">
-      <Banner />
+      <div className="bg-gradient-to-r from-green-600 to-teal-500 rounded-2xl p-5 text-white">
+        <h2 className="text-xl font-bold">Super Admin — Upload Data</h2>
+        <p className="text-sm opacity-80 mt-1">Kelola dan upload semua data KPI ke database</p>
+      </div>
 
       {/* DEV CONTEXT BANNER */}
       {section === "dev" && (
@@ -451,6 +622,29 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               const done = uploadStates[t.key].isFromUpload
               return (
                 <div key={t.key} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${done ? "bg-white text-indigo-700" : "bg-white/20 text-white"}`}>
+                  {t.icon} {done ? "✅" : "⏳"} {t.label}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL CONTEXT BANNER */}
+      {section === "global" && (
+        <div className="bg-gradient-to-r from-sky-500 to-teal-600 text-white rounded-2xl p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Upload Global PHI</h2>
+              <p className="text-sm opacity-80 mt-1">Upload file Global PHI — Backup, Restore, Backlog, VM Monitoring, Global Area CNS</p>
+            </div>
+            <div className="text-5xl opacity-20">🌏</div>
+          </div>
+          <div className="flex gap-3 mt-4 flex-wrap">
+            {GLOBAL_TABS.map((t) => {
+              const done = uploadStates[t.key].isFromUpload
+              return (
+                <div key={t.key} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${done ? "bg-white text-sky-700" : "bg-white/20 text-white"}`}>
                   {t.icon} {done ? "✅" : "⏳"} {t.label}
                 </div>
               )
@@ -477,10 +671,10 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="relative flex h-3 w-3">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${section === "apps" ? "bg-green-400" : "bg-indigo-400"}`} />
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${section === "apps" ? "bg-green-500" : "bg-indigo-500"}`} />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${section === "apps" ? "bg-green-400" : section === "dev" ? "bg-indigo-400" : "bg-sky-400"}`} />
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${section === "apps" ? "bg-green-500" : section === "dev" ? "bg-indigo-500" : "bg-sky-500"}`} />
             </span>
-            <span className={`font-medium ${section === "apps" ? "text-green-600" : "text-indigo-600"}`}>LIVE</span>
+            <span className={`font-medium ${section === "apps" ? "text-green-600" : section === "dev" ? "text-indigo-600" : "text-sky-600"}`}>LIVE</span>
             <span className="text-gray-400">•</span>
             <span>{formatTime(lastUpdate)}</span>
           </div>
@@ -585,14 +779,14 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               const wb = XLSX.utils.book_new()
               XLSX.utils.book_append_sheet(wb, ws, currentState.sheetName || "Sheet1")
               XLSX.writeFile(wb, `export_${activeTab}_${Date.now()}.xlsx`)
-            }} className={`flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm ${section === "apps" ? "bg-green-500 hover:bg-green-600" : "bg-indigo-500 hover:bg-indigo-600"}`}>
+            }} className={`flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm ${section === "apps" ? "bg-green-500 hover:bg-green-600" : section === "dev" ? "bg-indigo-500 hover:bg-indigo-600" : "bg-sky-500 hover:bg-sky-600"}`}>
               📥 Export Excel
             </button>
           </div>
           <div className="overflow-x-auto rounded-xl border">
             <table className="w-full text-sm">
               <thead>
-                <tr className={`text-white ${section === "apps" ? "bg-gradient-to-r from-green-500 to-teal-500" : "bg-gradient-to-r from-indigo-500 to-purple-500"}`}>
+                <tr className={`text-white ${section === "apps" ? "bg-gradient-to-r from-green-500 to-teal-500" : section === "dev" ? "bg-gradient-to-r from-indigo-500 to-purple-500" : "bg-gradient-to-r from-sky-500 to-teal-500"}`}>
                   <th className="px-3 py-3 text-left font-medium text-xs opacity-80 w-10">#</th>
                   {currentState.headers.map((h) => (
                     <th key={h} className="px-3 py-3 text-left font-medium text-xs whitespace-nowrap">{h}</th>
@@ -601,7 +795,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               </thead>
               <tbody>
                 {paginatedData.map((row, i) => (
-                  <tr key={i} className={`border-t ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${section === "apps" ? "hover:bg-green-50" : "hover:bg-indigo-50"}`}>
+                  <tr key={i} className={`border-t ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${section === "apps" ? "hover:bg-green-50" : section === "dev" ? "hover:bg-indigo-50" : "hover:bg-sky-50"}`}>
                     <td className="px-3 py-2 text-gray-400 text-xs">{(currentPage_ - 1) * ROWS_PER_PAGE + i + 1}</td>
                     {currentState.headers.map((h) => (
                       <td key={h} className="px-3 py-2 text-gray-700 whitespace-nowrap max-w-[200px] truncate text-xs">{String(row[h] ?? "")}</td>
@@ -623,7 +817,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
                   if (p > totalPages) return null
                   return (
                     <button key={p} onClick={() => setCurrentPage((prev) => ({ ...prev, [activeTab]: p }))}
-                      className={`px-3 py-1.5 rounded-lg border text-sm ${p === currentPage_ ? (section === "apps" ? "bg-green-500 text-white border-green-500" : "bg-indigo-500 text-white border-indigo-500") : "hover:bg-gray-50"}`}>
+                      className={`px-3 py-1.5 rounded-lg border text-sm ${p === currentPage_ ? (section === "apps" ? "bg-green-500 text-white border-green-500" : section === "dev" ? "bg-indigo-500 text-white border-indigo-500" : "bg-sky-500 text-white border-sky-500") : "hover:bg-gray-50"}`}>
                       {p}
                     </button>
                   )
@@ -650,9 +844,9 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-[320px] shadow-xl text-center">
             <div className="text-3xl mb-2">🚀</div>
-            <h2 className="font-semibold text-gray-800 mb-2">Mengirim Data {section === "apps" ? "APPS" : "Developer"} ke Database</h2>
+            <h2 className="font-semibold text-gray-800 mb-2">Mengirim Data {section === "apps" ? "APPS" : section === "dev" ? "Developer" : "Global PHI"} ke Database</h2>
             <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
-              <div className={`h-3 transition-all duration-300 ${section === "apps" ? "bg-green-500" : "bg-indigo-500"}`} style={{ width: `${progress}%` }} />
+              <div className={`h-3 transition-all duration-300 ${section === "apps" ? "bg-green-500" : section === "dev" ? "bg-indigo-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
             </div>
             <p className="text-sm text-gray-600">{progress}% selesai</p>
           </div>

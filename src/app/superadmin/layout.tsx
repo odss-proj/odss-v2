@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation"
 import { Settings, Users, BarChart2, LogOut, Menu } from "lucide-react"
 import { supabase } from "../../lib/supabase"
 
-type Section = "apps" | "dev"
-
-export function emitSection(s: Section) {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("superadmin-section", { detail: s }))
-  }
-}
+type Section = "apps" | "dev" | "global"
 
 function SuperadminSidebar({
   isOpen,
@@ -29,14 +23,18 @@ function SuperadminSidebar({
     router.push("/login")
   }
 
+  const menuItems: { section: Section; icon: string; label: string }[] = [
+    { section: "apps",   icon: "🖥️", label: "APPS" },
+    { section: "dev",    icon: "💻", label: "Developer" },
+    { section: "global", icon: "🌏", label: "Global" },
+  ]
+
   return (
     <div
       className={`fixed top-0 left-0 h-screen w-64 bg-white border-r flex flex-col justify-between transition-transform duration-300 z-50
       ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
     >
-      {/* TOP */}
       <div className="overflow-y-auto flex-1">
-        {/* LOGO */}
         <div className="p-6 pb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
@@ -48,38 +46,24 @@ function SuperadminSidebar({
         </div>
 
         <div className="px-3 space-y-1">
+          {menuItems.map(({ section, icon, label }) => (
+            <div
+              key={section}
+              onClick={() => onSectionChange(section)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold text-sm ${
+                activeSection === section
+                  ? "bg-green-500 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <span>{icon}</span>
+              <span>{label}</span>
+            </div>
+          ))}
 
-          {/* APPS */}
-          <div
-            onClick={() => onSectionChange("apps")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold text-sm ${
-              activeSection === "apps"
-                ? "bg-green-500 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <span>🖥️</span>
-            <span>APPS</span>
-          </div>
-
-          {/* DEVELOPER */}
-          <div
-            onClick={() => onSectionChange("dev")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold text-sm ${
-              activeSection === "dev"
-                ? "bg-green-500 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <span>💻</span>
-            <span>Developer</span>
-          </div>
-
-          {/* MANAJEMEN */}
           <div className="px-1 pt-5 pb-1">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3">Manajemen</p>
           </div>
-
           <div className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
             <Users size={15} /> User Management
           </div>
@@ -89,11 +73,9 @@ function SuperadminSidebar({
           <div className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
             <Settings size={15} /> Pengaturan
           </div>
-
         </div>
       </div>
 
-      {/* BOTTOM */}
       <div className="p-4 space-y-3 border-t">
         <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white p-4 rounded-xl">
           <p className="text-xs opacity-80">Login sebagai</p>
@@ -121,15 +103,19 @@ function SuperadminHeader({
   userName: string
   activeSection: Section
 }) {
+  const titles: Record<Section, string> = {
+    apps:   "🖥️ Upload KPI APPS",
+    dev:    "💻 Upload KPI Developer",
+    global: "🌏 Upload Global PHI",
+  }
+
   return (
     <div className="bg-white px-6 py-4 border-b flex justify-between items-center">
       <div className="flex items-center gap-4">
         <Menu className="cursor-pointer text-gray-600" onClick={toggleSidebar} />
         <div>
           <p className="text-gray-500 text-sm">Selamat datang, {userName} 👋</p>
-          <h1 className="text-lg font-semibold">
-            {activeSection === "apps" ? "🖥️ Upload KPI APPS" : "💻 Upload KPI Developer"}
-          </h1>
+          <h1 className="text-lg font-semibold">{titles[activeSection]}</h1>
         </div>
       </div>
       <div className="flex items-center gap-3">
