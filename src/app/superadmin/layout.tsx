@@ -2,10 +2,26 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { LayoutDashboard, Settings, Users, BarChart2, LogOut, Menu } from "lucide-react"
+import { Settings, Users, BarChart2, LogOut, Menu } from "lucide-react"
 import { supabase } from "../../lib/supabase"
 
-function SuperadminSidebar({ isOpen }: { isOpen: boolean }) {
+type Section = "apps" | "dev"
+
+export function emitSection(s: Section) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("superadmin-section", { detail: s }))
+  }
+}
+
+function SuperadminSidebar({
+  isOpen,
+  activeSection,
+  onSectionChange,
+}: {
+  isOpen: boolean
+  activeSection: Section
+  onSectionChange: (s: Section) => void
+}) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -19,8 +35,9 @@ function SuperadminSidebar({ isOpen }: { isOpen: boolean }) {
       ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
     >
       {/* TOP */}
-      <div>
-        <div className="p-6">
+      <div className="overflow-y-auto flex-1">
+        {/* LOGO */}
+        <div className="p-6 pb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
               SA
@@ -30,54 +47,49 @@ function SuperadminSidebar({ isOpen }: { isOpen: boolean }) {
           <p className="text-xs text-gray-400 mt-1">Super Admin Panel</p>
         </div>
 
-        <div className="px-4 space-y-1">
+        <div className="px-3 space-y-1">
+
+          {/* APPS */}
           <div
-            onClick={() => router.push("/superadmin")}
-            className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer bg-green-500 text-white"
+            onClick={() => onSectionChange("apps")}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold text-sm ${
+              activeSection === "apps"
+                ? "bg-green-500 text-white"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
           >
-            <LayoutDashboard size={16} />
-            Dashboard
+            <span>🖥️</span>
+            <span>APPS</span>
           </div>
 
-          <div className="px-4 pt-4 pb-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upload Data</p>
+          {/* DEVELOPER */}
+          <div
+            onClick={() => onSectionChange("dev")}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold text-sm ${
+              activeSection === "dev"
+                ? "bg-green-500 text-white"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            <span>💻</span>
+            <span>Developer</span>
           </div>
 
-          {[
-            { icon: "🔄", label: "DT Transfer" },
-            { icon: "☁️", label: "Own Cloud" },
-            { icon: "📊", label: "Monitoring WF" },
-            { icon: "📋", label: "Coda" },
-            { icon: "🚚", label: "Logix" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              onClick={() => router.push("/superadmin")}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer text-sm"
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </div>
-          ))}
-
-          <div className="px-4 pt-4 pb-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Manajemen</p>
+          {/* MANAJEMEN */}
+          <div className="px-1 pt-5 pb-1">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3">Manajemen</p>
           </div>
 
-          <div className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-            <Users size={15} />
-            User Management
+          <div className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+            <Users size={15} /> User Management
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+            <BarChart2 size={15} /> Laporan
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+            <Settings size={15} /> Pengaturan
           </div>
 
-          <div className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-            <BarChart2 size={15} />
-            Laporan
-          </div>
-
-          <div className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-            <Settings size={15} />
-            Pengaturan
-          </div>
         </div>
       </div>
 
@@ -103,17 +115,21 @@ function SuperadminSidebar({ isOpen }: { isOpen: boolean }) {
 function SuperadminHeader({
   toggleSidebar,
   userName,
+  activeSection,
 }: {
   toggleSidebar: () => void
   userName: string
+  activeSection: Section
 }) {
   return (
     <div className="bg-white px-6 py-4 border-b flex justify-between items-center">
       <div className="flex items-center gap-4">
-        <Menu className="cursor-pointer" onClick={toggleSidebar} />
+        <Menu className="cursor-pointer text-gray-600" onClick={toggleSidebar} />
         <div>
           <p className="text-gray-500 text-sm">Selamat datang, {userName} 👋</p>
-          <h1 className="text-lg font-semibold">Super Admin Dashboard</h1>
+          <h1 className="text-lg font-semibold">
+            {activeSection === "apps" ? "🖥️ Upload KPI APPS" : "💻 Upload KPI Developer"}
+          </h1>
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -131,15 +147,27 @@ function SuperadminHeader({
 
 export default function SuperadminRootLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [activeSection, setActiveSection] = useState<Section>("apps")
 
-  // userName dipass via context atau ambil dari children — untuk layout ini pakai default
+  const handleSectionChange = (s: Section) => {
+    setActiveSection(s)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("superadmin-section", { detail: s }))
+    }
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen">
-      <SuperadminSidebar isOpen={isSidebarOpen} />
+      <SuperadminSidebar
+        isOpen={isSidebarOpen}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
       <div className={`transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-0"}`}>
         <SuperadminHeader
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           userName="superadmin"
+          activeSection={activeSection}
         />
         <div className="p-6">{children}</div>
       </div>
