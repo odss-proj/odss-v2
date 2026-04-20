@@ -73,7 +73,7 @@ export default function LoginPage() {
         {/* ✅ FIX 2: ODSS Logo */}
         <div className="flex justify-center mb-6">
           <Image
-            src="/images/logo_odss.png"
+            src="/images/logo_odss.svg"
             alt="Logo ODSS"
             width={180}
             height={80}
