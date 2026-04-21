@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import * as XLSX from "xlsx"
 import { supabase } from "../../lib/supabase"
 
-type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix" | "area_cover"
+type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
 type DevTabKey    = "dev_coda" | "dev_sprint" | "dev_backlog"
 type GlobalTabKey = "global_backup" | "global_restore" | "global_backlog" | "global_pilot" | "global_vm"
 type TabKey       = AppsTabKey | DevTabKey | GlobalTabKey
@@ -36,15 +36,60 @@ const parsePercent = (val: unknown): number => {
 
 const parseDate = (val: unknown): string | null => {
   if (!val) return null
-  if (val instanceof Date) return val.toISOString().split("T")[0]
+
+  // Helper: validate year
+  const validYear = (y: number) => y >= 1900 && y <= 2100
+
+  if (val instanceof Date) {
+    if (!validYear(val.getFullYear())) return null
+    return val.toISOString().split("T")[0]
+  }
+
   if (typeof val === "number") {
-    const epoch = new Date(1899, 11, 30)
-    return new Date(epoch.getTime() + val * 86400000).toISOString().split("T")[0]
+    // Excel serial: 1 = 1900-01-01, 73050 = 2099-12-31
+    if (val < 1 || val > 73050) return null
+    const d = new Date(new Date(1899, 11, 30).getTime() + val * 86400000)
+    if (isNaN(d.getTime()) || !validYear(d.getFullYear())) return null
+    return d.toISOString().split("T")[0]
   }
+
   if (typeof val === "string") {
-    if (val.includes("/")) { const [d,m,y] = val.split("/"); return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}` }
-    const d = new Date(val); if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]
+    const s = val.trim()
+    if (!s) return null
+
+    // Format: "2026 07:24:57-04-15" → extract year + last two date parts
+    // Try pattern: YYYY HH:MM:SS-MM-DD or similar weird formats
+    const weirdMatch = s.match(/^(\d{4})\s+[\d:]+[-](\d{2})[-](\d{2})$/)
+    if (weirdMatch) {
+      const [, y, m, d] = weirdMatch
+      if (validYear(parseInt(y))) return `${y}-${m}-${d}`
+    }
+
+    // Format: DD/MM/YYYY or DD/MM/YY
+    if (s.includes("/")) {
+      const parts = s.split("/")
+      if (parts.length === 3) {
+        const [d, m, y] = parts
+        const yr = parseInt(y) + (parseInt(y) < 100 ? 2000 : 0)
+        if (!validYear(yr)) return null
+        return `${yr}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`
+      }
+    }
+
+    // Format: YYYY-MM-DD HH:MM:SS → just take date part
+    const dtMatch = s.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (dtMatch) {
+      const d = new Date(dtMatch[1])
+      if (!isNaN(d.getTime()) && validYear(d.getFullYear())) return dtMatch[1]
+    }
+
+    // Standard parse fallback
+    const d = new Date(s)
+    if (!isNaN(d.getTime()) && validYear(d.getFullYear())) {
+      return d.toISOString().split("T")[0]
+    }
   }
+
   return null
 }
 
@@ -56,7 +101,6 @@ const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim()
 const getTableName = (tab: TabKey): string => {
   switch (tab) {
     case "coda":           return "coda_main"
-    case "area_cover":     return "area_cover_cns"
     case "dev_coda":       return "data_source_coda"
     case "dev_sprint":     return "data_source_dev_sprint"
     case "dev_backlog":    return "data_source_project_backlog"
@@ -93,17 +137,17 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       prosentase: parsePercent(r["Prosentase"]),
     }))
     case "logix": return data.map((r) => ({
-      date_logs: r["date_logs"] ? new Date(String(r["date_logs"])) : null,
+      date_logs: parseDate(r["date_logs"]),
       email: str(r["email"]), id_user: r["id_user"], user_name: str(r["user"]),
       kd_branch: r["kd_branch"], branch: str(r["branch"]), pic_branch: str(r["pic_branch"]),
       nomor_ticket: str(r["nomor_ticket"]),
-      ticket_created_date: r["ticket_created_date"] ? new Date(String(r["ticket_created_date"])) : null,
+      ticket_created_date: parseDate(r["ticket_created_date"]),
       ticket_created_detail: str(r["ticket_created_detail"]), ticket_created_in_s: num(r["ticket_created_in_s"]) ?? 0,
       severity: str(r["severity"]), type_supporting: str(r["type_supporting"]),
       sub_type_supporting: str(r["sub_type_supporting"]), detail_issue: str(r["detail_issue"]),
       aplikasi: str(r["aplikasi"]), modul: str(r["modul"]), menu: str(r["menu"]),
       status_ticket: str(r["status_ticket"]), last_state: str(r["last_state"]),
-      ticket_close_date: r["ticket_close_date"] ? new Date(String(r["ticket_close_date"])) : null,
+      ticket_close_date: parseDate(r["ticket_close_date"]),
       ticket_close_detail: str(r["ticket_close_detail"]), ticket_close_in_s: num(r["ticket_close_in_s"]) ?? 0,
       ticket_durasi: str(r["ticket_durasi"]), ticket_durasi_in_s: num(r["ticket_durasi_in_s"]) ?? 0,
       default_respon_time: str(r["default_respon_time"]),
@@ -116,7 +160,7 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       dev_respon_time_in_s: num(r["dev_respon_time_in_s"]) ?? 0,
       durasi_ticket_hari: num(r["durasi_ticket_hari"]) ?? 0,
       ticket_created_month: str(r["ticket_created_month"]),
-      date_extract: r["date_extract"] ? new Date(String(r["date_extract"])) : null,
+      date_extract: parseDate(r["date_extract"]),
       ticket_in_s: num(r["ticket_in_s"]) ?? 0, judul_ticket: str(r["judul_ticket"]),
       deskripsi_ticket: str(r["deskripsi_ticket"]), note_br: str(r["note_br"]),
       fileset: str(r["fileset"]), solved_by: str(r["solved_by"]),
@@ -125,7 +169,7 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       flag_report: str(r["Flag Report"]), req_type: str(r["Req. Type"]),
       year_request: num(r["Year Request"]), quartal: str(r["Quartal"]),
       application: str(r["Application"]), appx: str(r["APPX"]),
-      doc_date: r["Doc. Date"] ? new Date(String(r["Doc. Date"])) : null,
+      doc_date: parseDate(r["Doc. Date"]),
       doc_type: str(r["Doc. Type"]), doc_no: str(r["Doc. No."]), doc_name: str(r["Doc. Name"]),
       description: str(r["Description"]), status_dev: str(r["Status Dev"]),
       status_project: str(r["Status Project"]), user_name: str(r["User"]),
@@ -189,39 +233,6 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       weekly_report: str(r["Weekly Report"]),
       flag_sprint: str(r["Flag Sprint"]), flag_tracking: str(r["Flag Tracking"]),
       weekly_sprint: str(r["Weekly Sprint"]), remark: str(r["Remark"]),
-    }))
-    case "area_cover": return data.map((r) => ({
-      status:           str(r["STATUS"]),
-      kode_subdist:     num(r["Kode Subdist"]),
-      kd_plan:          str(r["Kd Plan"]),
-      nama_subdist:     str(r["Nama Subdist"]),
-      cover:            str(r["COVER"]),
-      pic:              str(r["PIC"]),
-      bas:              str(r["BAS"]),
-      assh:             str(r["ASSH"]),
-      area:             str(r["Area"]),
-      type:             str(r["Type"]),
-      divisi:           str(r["Divisi"]),
-      reg_rom:          str(r["REG/ROM"]),
-      vm:               str(r["VM"]),
-      schema_name:      str(r["Schema"]),
-      db_utama:         str(r["DB Utama"]),
-      salesman_non_sfa: num(r["SALESMAN NON SFA"]),
-      salesman_sfa:     num(r["SALESMAN SFA"]),
-      user_ficom:       num(r["USER"]),
-      jmlh_faktur_lm:   num(r["Jmlh Faktur LM"]),
-      size_datafile_gb: num(r["Size Datafile in GB"]),
-      total_salesman:   num(r["Total Salesman"]),
-      drive_vm:         str(r["Drive VM"]),
-      bom:              str(r["BOM"]),
-      region:           str(r["REGION"]),
-      rom:              str(r["ROM"]),
-      nom:              str(r["NOM"]),
-      cabang:           str(r["CABANG"]),
-      bom_aos_aom:      str(r["BOM/AOS/AOM"]),
-      salesman_count:   num(r["SALESMAN"]),
-      user_count:       num(r["USER (CNS)"]),
-      size_db:          num(r["SIZE DB"]),
     }))
     case "global_backup": return data.map((r) => {
       // Hitung dari WEEK 1-52
@@ -317,7 +328,6 @@ const getKey = (tab: TabKey, row: Record<string, unknown>): string => {
     case "dev_coda":   return `${row.doc_name}-${row.dev_pic}-${row.year_dev}`
     case "dev_sprint": return `${row.sprint}-${row.product_backlog}-${row.dev_pic_pb}`
     case "dev_backlog": return `${row.request}-${row.dev_sprint}-${row.pic_dev}`
-    case "area_cover":    return `${row.kode_subdist}`
     case "global_backup":  return `${row.adp_code}-${row.server}`
     case "global_restore": return `${row.adp_code}-${row.month}`
     case "global_backlog": return `${row.no}-${row.concern}`
@@ -333,10 +343,6 @@ const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
   monitoring_wf: ["SUBDIS_ID","SUBDIS_NAME","DIVISI","TYPE","KOTA","REGION","TAS","RELEASE","TGL TRANSFER TERAKHIR","LAMA","cut off","Pekan","Prosentase"],
   logix: ["date_logs","email","id_user","user","kd_branch","branch","pic_branch","nomor_ticket","ticket_created_date","ticket_created_detail","ticket_created_in_s","severity","type_supporting","sub_type_supporting","detail_issue","aplikasi","modul","menu","status_ticket","last_state","ticket_close_date","ticket_close_detail","ticket_close_in_s","ticket_durasi","ticket_durasi_in_s","default_respon_time","default_respon_time_by_severity","tas_pic","tas_respon_time","tas_respon_time_in_s","br_pic","br_respon_time","br_respon_time_in_s","dev_pic","dev_respon_time","dev_respon_time_in_s","durasi_ticket_hari","ticket_created_month","date_extract","ticket_in_s","judul_ticket","deskripsi_ticket","note_br","fileset","solved_by"],
   coda: ["Flag Report","Req. Type","Year Request","Quartal","Application","APPX","Doc. Date","Doc. Type","Doc. No.","Doc. Name","Description","Status Dev","Status Project","User","User Request","Project","BR PIC","Task PIC_2","Testing PIC 1","Testing PIC 2","Testing PIC 3","Dev PIC","Pilot","Release","Year Done","Bobot Dokumen","Bobot Testing PIC 1","Bobot Testing PIC 2","Bobot Testing PIC 3","YearDone2","Bobot Test2 2025","Test2 Done 2025","Bobot Test3 2025","Test3 Done 2025","Bobot Test1 2026","Test1 Done 2026","Bobot Test2 2026","Test2 Done 2026","Bobot Test3 2026","Test3 Done 2026","Dept","Sub-Dept"],
-  area_cover: [
-    "STATUS","Kode Subdist","Kd Plan","Nama Subdist","COVER","PIC","BAS","ASSH",
-    "Area","Type","Divisi","REG/ROM","VM","Schema","BOM","REGION","ROM","NOM",
-  ],
   dev_coda: ["ADOP Project Backlog","Project","Application","Year Dev","Year Done","Doc. Type","Doc. Name","Tshirt Sizing","Dev. Point","Dev PIC","Status Dev","Work Complete","Start Date","Finish Date","Deadline","Pilot","Release","Test Cycle","Doc. Cycle","Year Request","Quartal","Doc. Date","User","User Request","Plan Pilot","Dev Sprint (DS)","Group Dev","Bobot Dokumen","appx","is_empty_deadline","is_empty_dev_point","is_empty_doc_point","Dev Point Bugs","flag_bugs","flag_on_time","flag_testing","flag_pilot","flag_done_dev"],
   dev_sprint: ["Sprint","ADOP Sprint","ADOP Project Backlog","Product Backlog","Sprint PIC","Dev PIC (PB)","Workload (PB)","Plan Start","Plan Finish","% Sprint","% Exp. Result","Is Plan","Status Dev (PB)","Tshirt Sizing (PB)","Dev. Point (PB)","Work Complete (PB)","Start Date (PB)","Finish Date (PB)","Deadline (PB)","Test Cycle (PB)","Doc. Cycle (PB)","is_empty_dev_point"],
   dev_backlog: ["User","Application","KPI","Request","Status SS","Status Project","Time Request","Deadline","Timeline","%Work Complete","PIC Dev","Dev Group","PIC BR","PIC Apps","Doc. Ref.","Status Dev","Review Sprint","Dev Sprint","ADOP Sprint","Weekly Report","Flag Sprint","Flag Tracking","Weekly Sprint","Remark"],
@@ -356,7 +362,6 @@ const APPS_TABS: TabConfig[] = [
   { key:"monitoring_wf",label:"Monitoring WF",  icon:"📊", color:"bg-gray-100 text-gray-600", activeColor:"bg-green-500 text-white",  description:"Monitoring workflow dan status pengerjaan",               section:"apps" },
   { key:"coda",         label:"Coda",           icon:"📋", color:"bg-gray-100 text-gray-600", activeColor:"bg-purple-500 text-white", description:"Upload dan sinkronisasi data dari Coda",                  section:"apps" },
   { key:"logix",        label:"Logix",          icon:"🚚", color:"bg-gray-100 text-gray-600", activeColor:"bg-orange-500 text-white", description:"Import data logistik dan pengiriman dari Logix",          section:"apps" },
-  { key:"area_cover",    label:"Area Cover CNS",  icon:"🗺️", color:"bg-gray-100 text-gray-600", activeColor:"bg-cyan-500 text-white",   description:"Upload Area_Cover_CNS_Merged.xlsx — gabungan Area Cover + BOM ROM NOM + List CNS Aktif", section:"apps" },
 ]
 
 const DEV_TABS: TabConfig[] = [

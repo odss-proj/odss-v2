@@ -696,7 +696,7 @@ export default function DashboardGlobal() {
                       <div key={r.area} className="space-y-1">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold px-2 py-0.5 rounded-full text-white text-xs"
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
                               style={{ backgroundColor: AREA_COLORS[r.area] || "#6b7280" }}>
                               {r.area}
                             </span>
