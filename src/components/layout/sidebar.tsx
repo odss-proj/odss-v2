@@ -60,7 +60,12 @@ export default function Sidebar({ isOpen }: Props) {
           <div
             onClick={() => {
               if (!role) return
-              router.push(`/dashboard/${role.toLowerCase()}`)
+              const dashboardPath: Record<string, string> = {
+                "SH-APPS": "/dashboard/apps",
+                "SH-APPC": "/dashboard/appc-sh",
+              }
+              const path = dashboardPath[role] || `/dashboard/${role.toLowerCase()}`
+              router.push(path)
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer bg-green-500 text-white"
           >
