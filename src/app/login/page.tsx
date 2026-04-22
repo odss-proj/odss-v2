@@ -1,4 +1,4 @@
-"use client"
+  "use client"
 
 import { useState } from "react"
 import Image from "next/image"
@@ -46,17 +46,22 @@ export default function LoginPage() {
         return
       }
 
-      const role = profile.role?.toUpperCase()
+     const role = profile.role?.toUpperCase()
       console.log("ROLE:", role)
 
-      if (role === "MDM") router.push("/dashboard/mdm")
-      else if (role === "APPC") router.push("/dashboard/appc")
-      else if (role === "SH-APPS") router.push("/dashboard/apps")
-      else if (role === "APPG") router.push("/dashboard/appg")
-      else if (role === "BR") router.push("/dashboard/br")
-      else if (role === "DEV") router.push("/dashboard/dev")
-      else if (role === "SUPERADMIN") router.push("/superadmin")
-      else if (role === "SH-APPS") router.push("/dashboard/apps")
+      const redirectMap: Record<string, string> = {
+        MDM: "/dashboard/mdm",
+        APPC: "/dashboard/appc",
+        "SH-APPS": "/dashboard/apps",
+        "SH-APPC": "/dashboard/appc-sh",
+        APPG: "/dashboard/appg",
+        BR: "/dashboard/br",
+        DEV: "/dashboard/dev",
+        SUPERADMIN: "/superadmin",
+      }
+
+      const dest = redirectMap[role]
+      if (dest) window.location.href = dest
     }
 
     setLoading(false)
@@ -93,8 +98,6 @@ export default function LoginPage() {
         <input
           className="w-full mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
           placeholder="Masukkan username Anda"
-          className="w-full mb-3 p-2 border rounded"
-          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={handleKeyDown}

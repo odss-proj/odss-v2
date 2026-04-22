@@ -1,4 +1,4 @@
-export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS"
+export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS" | "SH-APPC"
 
 export const sidebarMenu: Record<
   Role,
@@ -30,6 +30,16 @@ export const sidebarMenu: Record<
   ],
 
   "SH-APPS": [
+    {
+      title: "Monitoring KPI",
+      children: [
+        { name: "Coda", path: "/dashboard/apps/coda" },
+        { name: "Logix", path: "/dashboard/apps/logix" },
+      ],
+    },
+  ],
+
+  "SH-APPC": [
     {
       title: "Monitoring KPI",
       children: [

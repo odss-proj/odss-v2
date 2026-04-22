@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
-// Tim APPS yang ditampilkan (berdasarkan first name dari task_pic_2)
-const APPS_TEAM = ["ALIF", "REVINDA", "ANAS", "GALIH", "ALDI", "YOSHI", "FAJAR", "HERMANTO", "IRSYAD", "ASEP"]
+// Tim APPC yang ditampilkan (berdasarkan first name dari task_pic_2)
+const APPS_TEAM = ["FAJRUL", "ASWAN", "IHSAN", "BRELY", "TAUFIK", "ACHMAD", "AANG"]
 
 // Ekstrak first name dari nama lengkap (misal "Hermanto Tandiabang" → "HERMANTO")
 function extractFirstName(val: string): string {
@@ -75,7 +75,7 @@ function getStatusColor(status: string) {
 
 type PicStat = { pic: string; total: number; done: number; progress: number; open: number; blocked: number; rate: number }
 
-export default function CodaBacklogView() {
+export default function CodaBacklogAppcView() {
   const [data, setData] = useState<CodaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -313,7 +313,7 @@ export default function CodaBacklogView() {
       <div className="flex gap-2 flex-wrap">
         {[
           { key: "overview", label: "📊 Status Overview" },
-          { key: "bypic", label: "👤 By TAS (Tim APPS)" },
+          { key: "bypic", label: "👤 By TAS (Tim APPC)" },
           { key: "byapp", label: "📱 By Aplikasi" },
           { key: "list", label: "📋 Daftar Dokumen" },
         ].map((s) => (
@@ -388,7 +388,7 @@ export default function CodaBacklogView() {
       {/* BY BR PIC */}
       {activeSection === "bypic" && (
         <div className="bg-white rounded-2xl border p-5">
-          <h3 className="font-semibold mb-4">Progress per TAS (Tim APPS)</h3>
+          <h3 className="font-semibold mb-4">Progress per TAS (Tim APPC)</h3>
           <div className="space-y-4">
             {picStats.map((p) => (
               <div key={p.pic} className="border rounded-xl p-4">
