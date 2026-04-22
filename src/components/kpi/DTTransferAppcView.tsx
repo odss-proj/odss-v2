@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 // PIC yang di-exclude
-const EXCLUDED_PICS = ["ALIF", "REVINDA", "ANAS", "GALIH", "ALDI", "YOSHI", "FAJAR", "HERMANTO", "IRSYAD", "ASEP"]
+const APPC_TEAM = ["FAJRUL", "ASWAN", "IHSAN", "BRELY", "TAUFIK", "ACHMAD", "AANG"]
 
 type DTRow = {
   kode_subdist: number
@@ -236,7 +236,7 @@ export default function DTTransferAppcView() {
 
       // Exclude CNS cover dan PIC tertentu
       const filtered_raw = normalized.filter(
-        (r) => r.cover !== "CNS" && !EXCLUDED_PICS.includes(r.pic)
+        (r) => r.cover === "CNS" && APPC_TEAM.includes(r.pic)
       )
       setData(filtered_raw)
       setLoading(false)
@@ -267,7 +267,7 @@ export default function DTTransferAppcView() {
   const lowCount = latestData.filter((r) => r.pct_ach < 0.95).length
 
   // By cover
-  const covers = ["EAST", "WEST", "CENTRAL"]
+  const covers = ["CNS"]
   const coverStats: CoverStat[] = covers.map((cov) => {
     const rows = filtered.filter((r) => r.cover === cov)
     return {
@@ -338,7 +338,7 @@ export default function DTTransferAppcView() {
       <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-2xl border">
         <span className="text-sm font-medium text-gray-500">Filter:</span>
         <div className="flex gap-2 flex-wrap">
-          {["ALL", "EAST", "WEST", "CENTRAL"].map((c) => (
+          {["ALL", "CNS"].map((c) => (
             <button key={c} onClick={() => setFilterCover(c)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                 filterCover === c ? "bg-green-500 text-white border-green-500" : "bg-white text-gray-500 border-gray-200 hover:border-green-300"

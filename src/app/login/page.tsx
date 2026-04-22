@@ -54,6 +54,7 @@ export default function LoginPage() {
         APPC: "/dashboard/appc",
         "SH-APPS": "/dashboard/apps",
         "SH-APPC": "/dashboard/appc-sh",
+        "SH-MDM":  "/dashboard/mdm-sh",
         APPG: "/dashboard/appg",
         BR: "/dashboard/br",
         DEV: "/dashboard/dev",

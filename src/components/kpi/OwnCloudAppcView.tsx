@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 // PIC/TAS yang di-exclude (sama seperti DT Transfer)
-const EXCLUDED_TAS = ["ALIF", "REVINDA", "ANAS", "GALIH", "ALDI", "YOSHI", "FAJAR", "HERMANTO", "IRSYAD", "ASEP"]
+const APPC_TEAM = ["FAJRUL", "ASWAN", "IHSAN", "BRELY", "TAUFIK", "ACHMAD", "AANG"]
 
 type OCRow = {
   kode_subdist: number
@@ -101,7 +101,7 @@ export default function OwnCloudAppcView() {
       })
 
       const filtered_raw = normalized.filter(
-        (r) => r.area !== "CNS" && !EXCLUDED_TAS.includes(r.tas)
+        (r) => r.area === "CNS" && APPC_TEAM.includes(r.tas)
       )
       setData(filtered_raw)
       setLoading(false)
@@ -131,7 +131,7 @@ export default function OwnCloudAppcView() {
   const lowCount = latestData.filter((r) => r.pct_kel_h3 < 0.90).length
 
   // By area
-  const areaStats: AreaStat[] = ["EAST", "WEST", "CENTRAL"].map((area) => {
+  const areaStats: AreaStat[] = ["CNS"].map((area) => {
     const rows = filtered.filter((r) => r.area === area)
     return {
       area,
@@ -196,7 +196,7 @@ export default function OwnCloudAppcView() {
       <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-2xl border">
         <span className="text-sm font-medium text-gray-500">Filter:</span>
         <div className="flex gap-2">
-          {["ALL", "EAST", "WEST", "CENTRAL"].map((a) => (
+          {["ALL", "CNS"].map((a) => (
             <button key={a} onClick={() => setFilterArea(a)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${filterArea === a ? "bg-teal-500 text-white border-teal-500" : "bg-white text-gray-500 border-gray-200 hover:border-teal-300"}`}>
               {a}

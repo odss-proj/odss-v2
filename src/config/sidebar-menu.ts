@@ -1,4 +1,4 @@
-export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS" | "SH-APPC"
+export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS" | "SH-APPC" | "SH-MDM"
 
 export const sidebarMenu: Record<
   Role,
@@ -14,6 +14,17 @@ export const sidebarMenu: Record<
         { name: "Excel", path: "/dashboard/mdm/excel" },
         { name: "Coda", path: "/dashboard/mdm/coda" },
       ],
+
+  "SH-MDM": [
+    {
+      title: "Monitoring KPI",
+      children: [
+        { name: "Coda Backlog", path: "/dashboard/mdm-sh" },
+        { name: "Logix",        path: "/dashboard/mdm-sh" },
+        { name: "Spreadsheets", path: "/dashboard/mdm-sh" },
+      ],
+    },
+  ],
     },
   ],
 

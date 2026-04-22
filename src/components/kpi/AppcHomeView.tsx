@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 const APPS_TEAM = ["FAJRUL", "ASWAN", "IHSAN", "BRELY", "TAUFIK", "ACHMAD", "AANG"]
-const EXCLUDED_TAS = ["ALIF", "REVINDA", "ANAS", "GALIH", "ALDI", "YOSHI", "FAJAR", "HERMANTO", "IRSYAD", "ASEP"]
 
 function extractFirstName(val: string): string {
   if (!val || val === "null") return ""
@@ -74,7 +73,7 @@ export default function AppcHomeView() {
         week: Number(r["week"] ?? 0),
         ach: Number(r["ach"] ?? 0) > 1 ? Number(r["ach"]) / 100 : Number(r["ach"] ?? 0),
         subdis_id: Number(r["kode_subdist"] ?? 0),
-      })).filter((r) => r.cover !== "CNS" && !EXCLUDED_TAS.includes(r.pic))
+      })).filter((r) => r.cover === "CNS" && APPS_TEAM.includes(r.pic))
 
       const dtLatestWeek = dtData.length > 0 ? Math.max(...dtData.map((r) => r.week)) : 0
       const dtLatest = dtData.filter((r) => r.week === dtLatestWeek)
@@ -97,7 +96,7 @@ export default function AppcHomeView() {
           h3: h3Raw > 1 ? h3Raw / 100 : h3Raw,
           h7: h7Raw > 1 ? h7Raw / 100 : h7Raw,
         }
-      }).filter((r) => r.area !== "CNS" && !EXCLUDED_TAS.includes(r.tas))
+      }).filter((r) => r.area === "CNS" && APPS_TEAM.includes(r.tas))
 
       const ocLatestWeek = ocData.length > 0 ? Math.max(...ocData.map((r) => r.week)) : 0
       const ocLatest = ocData.filter((r) => r.week === ocLatestWeek)
@@ -115,7 +114,7 @@ export default function AppcHomeView() {
         pekan: Number(r["pekan"] ?? 0),
         prosentase: Number(r["prosentase"] ?? 0) > 1 ? Number(r["prosentase"]) / 100 : Number(r["prosentase"] ?? 0),
         lama: Number(r["lama"] ?? 0),
-      })).filter((r) => r.region !== "CNS" && !EXCLUDED_TAS.includes(r.tas))
+      })).filter((r) => r.region === "CNS" && APPS_TEAM.includes(r.tas))
 
       const wfLatestPekan = wfData.length > 0 ? Math.max(...wfData.map((r) => r.pekan)) : 0
       const wfLatest = wfData.filter((r) => r.pekan === wfLatestPekan)
