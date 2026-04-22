@@ -35,67 +35,59 @@ const parsePercent = (val: unknown): number => {
   return 0
 }
 
+// RESOLVED: Menggunakan parseDate dari main (lebih robust & handles edge cases lebih baik)
 const parseDate = (val: unknown): string | null => {
   if (!val) return null
 
-  // Date object dari xlsx (cellDates:true) — ambil komponen lokal, bukan UTC
+  // Helper: validate year
+  const validYear = (y: number) => y >= 1900 && y <= 2100
+
   if (val instanceof Date) {
-    if (isNaN(val.getTime())) return null
-    const y = val.getFullYear()
-    // Validasi tahun wajar — tolak nilai aneh seperti year 45721
-    if (y < 1900 || y > 2099) return null
-    const m = String(val.getMonth() + 1).padStart(2, "0")
-    const d = String(val.getDate()).padStart(2, "0")
-    return `${y}-${m}-${d}`
+    if (!validYear(val.getFullYear())) return null
+    return val.toISOString().split("T")[0]
   }
 
-  // Number: bisa Excel serial (< 60000) atau format YYYYMMDD (8 digit, > 20000000)
   if (typeof val === "number") {
-    // Format YYYYMMDD (contoh: 20250226)
-    if (val >= 19000101 && val <= 21001231) {
-      const s = String(Math.round(val))
-      if (s.length === 8) {
-        const y = s.slice(0, 4), m = s.slice(4, 6), d = s.slice(6, 8)
-        const dt = new Date(`${y}-${m}-${d}`)
-        if (!isNaN(dt.getTime())) return `${y}-${m}-${d}`
+    // Excel serial: 1 = 1900-01-01, 73050 = 2099-12-31
+    if (val < 1 || val > 73050) return null
+    const d = new Date(new Date(1899, 11, 30).getTime() + val * 86400000)
+    if (isNaN(d.getTime()) || !validYear(d.getFullYear())) return null
+    return d.toISOString().split("T")[0]
+  }
+
+  if (typeof val === "string") {
+    const s = val.trim()
+    if (!s) return null
+
+    // Format: "2026 07:24:57-04-15" → extract year + last two date parts
+    const weirdMatch = s.match(/^(\d{4})\s+[\d:]+[-](\d{2})[-](\d{2})$/)
+    if (weirdMatch) {
+      const [, y, m, d] = weirdMatch
+      if (validYear(parseInt(y))) return `${y}-${m}-${d}`
+    }
+
+    // Format: DD/MM/YYYY or DD/MM/YY
+    if (s.includes("/")) {
+      const parts = s.split("/")
+      if (parts.length === 3) {
+        const [d, m, y] = parts
+        const yr = parseInt(y) + (parseInt(y) < 100 ? 2000 : 0)
+        if (!validYear(yr)) return null
+        return `${yr}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`
       }
     }
-    // Excel serial date (1 Jan 1900 = 1)
-    if (val > 0 && val < 2958466) {
-      const epoch = new Date(1899, 11, 30)
-      const dt = new Date(epoch.getTime() + val * 86400000)
-      const y = dt.getFullYear()
-      if (y < 1900 || y > 2099) return null
-      const m = String(dt.getMonth() + 1).padStart(2, "0")
-      const d = String(dt.getDate()).padStart(2, "0")
-      return `${y}-${m}-${d}`
-    }
-    return null
-  }
 
-  // String
-  if (typeof val === "string" && val.trim()) {
-    const s = val.trim()
-    // Sudah format YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-    // Format DD/MM/YYYY
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
-      const [d, m, y] = s.split("/")
-      return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`
+    // Format: YYYY-MM-DD HH:MM:SS → just take date part
+    const dtMatch = s.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (dtMatch) {
+      const d = new Date(dtMatch[1])
+      if (!isNaN(d.getTime()) && validYear(d.getFullYear())) return dtMatch[1]
     }
-    // Format YYYYMMDD string
-    if (/^\d{8}$/.test(s)) {
-      const y = s.slice(0,4), m = s.slice(4,6), d = s.slice(6,8)
-      return `${y}-${m}-${d}`
-    }
-    // Generic parse — gunakan komponen lokal
-    const dt = new Date(s)
-    if (!isNaN(dt.getTime())) {
-      const y = dt.getFullYear()
-      if (y < 1900 || y > 2099) return null
-      const mo = String(dt.getMonth() + 1).padStart(2, "0")
-      const dy = String(dt.getDate()).padStart(2, "0")
-      return `${y}-${mo}-${dy}`
+
+    // Standard parse fallback
+    const d = new Date(s)
+    if (!isNaN(d.getTime()) && validYear(d.getFullYear())) {
+      return d.toISOString().split("T")[0]
     }
   }
 
@@ -111,7 +103,6 @@ const getTableName = (tab: TabKey): string => {
   switch (tab) {
     case "mdm_setting":    return "mdm_monitoring_setting"
     case "coda":           return "coda_main"
-    case "area_cover":     return "area_cover_cns"
     case "dev_coda":       return "data_source_coda"
     case "dev_sprint":     return "data_source_dev_sprint"
     case "dev_backlog":    return "data_source_project_backlog"
@@ -147,18 +138,19 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       lama: num(r["LAMA"]), cut_off: parseDate(r["cut off"]), pekan: num(r["Pekan"]),
       prosentase: parsePercent(r["Prosentase"]),
     }))
+    // RESOLVED: Menggunakan date parsing clean dari main (tanpa conditional check redundant)
     case "logix": return data.map((r) => ({
-      date_logs: r["date_logs"] ? parseDate(r["date_logs"]) : null,
+      date_logs: parseDate(r["date_logs"]),
       email: str(r["email"]), id_user: r["id_user"], user_name: str(r["user"]),
       kd_branch: r["kd_branch"], branch: str(r["branch"]), pic_branch: str(r["pic_branch"]),
       nomor_ticket: str(r["nomor_ticket"]),
-      ticket_created_date: r["ticket_created_date"] ? parseDate(r["ticket_created_date"]) : null,
+      ticket_created_date: parseDate(r["ticket_created_date"]),
       ticket_created_detail: str(r["ticket_created_detail"]), ticket_created_in_s: num(r["ticket_created_in_s"]) ?? 0,
       severity: str(r["severity"]), type_supporting: str(r["type_supporting"]),
       sub_type_supporting: str(r["sub_type_supporting"]), detail_issue: str(r["detail_issue"]),
       aplikasi: str(r["aplikasi"]), modul: str(r["modul"]), menu: str(r["menu"]),
       status_ticket: str(r["status_ticket"]), last_state: str(r["last_state"]),
-      ticket_close_date: r["ticket_close_date"] ? parseDate(r["ticket_close_date"]) : null,
+      ticket_close_date: parseDate(r["ticket_close_date"]),
       ticket_close_detail: str(r["ticket_close_detail"]), ticket_close_in_s: num(r["ticket_close_in_s"]) ?? 0,
       ticket_durasi: str(r["ticket_durasi"]), ticket_durasi_in_s: num(r["ticket_durasi_in_s"]) ?? 0,
       default_respon_time: str(r["default_respon_time"]),
@@ -171,16 +163,17 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       dev_respon_time_in_s: num(r["dev_respon_time_in_s"]) ?? 0,
       durasi_ticket_hari: num(r["durasi_ticket_hari"]) ?? 0,
       ticket_created_month: str(r["ticket_created_month"]),
-      date_extract: r["date_extract"] ? parseDate(r["date_extract"]) : null,
+      date_extract: parseDate(r["date_extract"]),
       ticket_in_s: num(r["ticket_in_s"]) ?? 0, judul_ticket: str(r["judul_ticket"]),
       deskripsi_ticket: str(r["deskripsi_ticket"]), note_br: str(r["note_br"]),
       fileset: str(r["fileset"]), solved_by: str(r["solved_by"]),
     }))
+    // RESOLVED: Menggunakan date parsing clean dari main
     case "coda": return data.map((r) => ({
       flag_report: str(r["Flag Report"]), req_type: str(r["Req. Type"]),
       year_request: num(r["Year Request"]), quartal: str(r["Quartal"]),
       application: str(r["Application"]), appx: str(r["APPX"]),
-      doc_date: r["Doc. Date"] ? parseDate(r["Doc. Date"]) : null,
+      doc_date: parseDate(r["Doc. Date"]),
       doc_type: str(r["Doc. Type"]), doc_no: str(r["Doc. No."]), doc_name: str(r["Doc. Name"]),
       description: str(r["Description"]), status_dev: str(r["Status Dev"]),
       status_project: str(r["Status Project"]), user_name: str(r["User"]),
@@ -200,12 +193,13 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       bobot_test2_2026: num(r["Bobot Test2 2026"]) ?? 0, test2_done_2026: num(r["Test2 Done 2026"]) ?? 0,
       bobot_test3_2026: num(r["Bobot Test3 2026"]) ?? 0, test3_done_2026: num(r["Test3 Done 2026"]) ?? 0,
     }))
+    // RESOLVED: MDM dari main-v2 dengan fix from → from_source
     case "mdm_setting": return data.map((r) => ({
       no:                   num(r["NO"]),
       kode_ap:              str(r["KODE AP"]),
       deskripsi:            str(r["DESKRIPSI"]),
       jml_setting:          num(r["JML SETTING"]),
-      from_source:                 str(r["FROM"]),
+      from_source:          str(r["FROM"]),           // FIX: was 'from' (reserved keyword)
       kategori:             str(r["KATEGORI"]),
       type:                 str(r["TYPE"]),
       bobot_setting:        num(r["BOBOT SETTING"]),
@@ -229,7 +223,7 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       status_release:       str(r["STATUS RELEASE"]),
       note_release:         str(r["NOTE RELEASE"]),
     }))
-        case "dev_coda": return data.map((r) => ({
+    case "dev_coda": return data.map((r) => ({
       adop_project_backlog: str(r["ADOP Project Backlog"]), project: str(r["Project"]),
       application: str(r["Application"]), year_dev: num(r["Year Dev"]),
       year_done: str(r["Year Done"]),   // TEXT: nilai seperti "2026.Q1.3.9"
@@ -273,39 +267,6 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       weekly_report: str(r["Weekly Report"]),
       flag_sprint: str(r["Flag Sprint"]), flag_tracking: str(r["Flag Tracking"]),
       weekly_sprint: str(r["Weekly Sprint"]), remark: str(r["Remark"]),
-    }))
-    case "area_cover": return data.map((r) => ({
-      status:           str(r["STATUS"]),
-      kode_subdist:     num(r["Kode Subdist"]),
-      kd_plan:          str(r["Kd Plan"]),
-      nama_subdist:     str(r["Nama Subdist"]),
-      cover:            str(r["COVER"]),
-      pic:              str(r["PIC"]),
-      bas:              str(r["BAS"]),
-      assh:             str(r["ASSH"]),
-      area:             str(r["Area"]),
-      type:             str(r["Type"]),
-      divisi:           str(r["Divisi"]),
-      reg_rom:          str(r["REG/ROM"]),
-      vm:               str(r["VM"]),
-      schema_name:      str(r["Schema"]),
-      db_utama:         str(r["DB Utama"]),
-      salesman_non_sfa: num(r["SALESMAN NON SFA"]),
-      salesman_sfa:     num(r["SALESMAN SFA"]),
-      user_ficom:       num(r["USER"]),
-      jmlh_faktur_lm:   num(r["Jmlh Faktur LM"]),
-      size_datafile_gb: num(r["Size Datafile in GB"]),
-      total_salesman:   num(r["Total Salesman"]),
-      drive_vm:         str(r["Drive VM"]),
-      bom:              str(r["BOM"]),
-      region:           str(r["REGION"]),
-      rom:              str(r["ROM"]),
-      nom:              str(r["NOM"]),
-      cabang:           str(r["CABANG"]),
-      bom_aos_aom:      str(r["BOM/AOS/AOM"]),
-      salesman_count:   num(r["SALESMAN"]),
-      user_count:       num(r["USER (CNS)"]),
-      size_db:          num(r["SIZE DB"]),
     }))
     case "global_backup": return data.map((r) => {
       // Hitung dari WEEK 1-52
@@ -401,7 +362,6 @@ const getKey = (tab: TabKey, row: Record<string, unknown>): string => {
     case "dev_coda":   return `${row.doc_name}-${row.dev_pic}-${row.year_dev}`
     case "dev_sprint": return `${row.sprint}-${row.product_backlog}-${row.dev_pic_pb}`
     case "dev_backlog": return `${row.request}-${row.dev_sprint}-${row.pic_dev}`
-    case "area_cover":    return `${row.kode_subdist}`
     case "global_backup":  return `${row.adp_code}-${row.server}`
     case "global_restore": return `${row.adp_code}-${row.month}`
     case "global_backlog": return `${row.no}-${row.concern}`
@@ -418,10 +378,6 @@ const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
   monitoring_wf: ["SUBDIS_ID","SUBDIS_NAME","DIVISI","TYPE","KOTA","REGION","TAS","RELEASE","TGL TRANSFER TERAKHIR","LAMA","cut off","Pekan","Prosentase"],
   logix: ["date_logs","email","id_user","user","kd_branch","branch","pic_branch","nomor_ticket","ticket_created_date","ticket_created_detail","ticket_created_in_s","severity","type_supporting","sub_type_supporting","detail_issue","aplikasi","modul","menu","status_ticket","last_state","ticket_close_date","ticket_close_detail","ticket_close_in_s","ticket_durasi","ticket_durasi_in_s","default_respon_time","default_respon_time_by_severity","tas_pic","tas_respon_time","tas_respon_time_in_s","br_pic","br_respon_time","br_respon_time_in_s","dev_pic","dev_respon_time","dev_respon_time_in_s","durasi_ticket_hari","ticket_created_month","date_extract","ticket_in_s","judul_ticket","deskripsi_ticket","note_br","fileset","solved_by"],
   coda: ["Flag Report","Req. Type","Year Request","Quartal","Application","APPX","Doc. Date","Doc. Type","Doc. No.","Doc. Name","Description","Status Dev","Status Project","User","User Request","Project","BR PIC","Task PIC_2","Testing PIC 1","Testing PIC 2","Testing PIC 3","Dev PIC","Pilot","Release","Year Done","Bobot Dokumen","Bobot Testing PIC 1","Bobot Testing PIC 2","Bobot Testing PIC 3","YearDone2","Bobot Test2 2025","Test2 Done 2025","Bobot Test3 2025","Test3 Done 2025","Bobot Test1 2026","Test1 Done 2026","Bobot Test2 2026","Test2 Done 2026","Bobot Test3 2026","Test3 Done 2026","Dept","Sub-Dept"],
-  area_cover: [
-    "STATUS","Kode Subdist","Kd Plan","Nama Subdist","COVER","PIC","BAS","ASSH",
-    "Area","Type","Divisi","REG/ROM","VM","Schema","BOM","REGION","ROM","NOM",
-  ],
   dev_coda: ["ADOP Project Backlog","Project","Application","Year Dev","Year Done","Doc. Type","Doc. Name","Tshirt Sizing","Dev. Point","Dev PIC","Status Dev","Work Complete","Start Date","Finish Date","Deadline","Pilot","Release","Test Cycle","Doc. Cycle","Year Request","Quartal","Doc. Date","User","User Request","Plan Pilot","Dev Sprint (DS)","Group Dev","Bobot Dokumen","appx","is_empty_deadline","is_empty_dev_point","is_empty_doc_point","Dev Point Bugs","flag_bugs","flag_on_time","flag_testing","flag_pilot","flag_done_dev"],
   dev_sprint: ["Sprint","ADOP Sprint","ADOP Project Backlog","Product Backlog","Sprint PIC","Dev PIC (PB)","Workload (PB)","Plan Start","Plan Finish","% Sprint","% Exp. Result","Is Plan","Status Dev (PB)","Tshirt Sizing (PB)","Dev. Point (PB)","Work Complete (PB)","Start Date (PB)","Finish Date (PB)","Deadline (PB)","Test Cycle (PB)","Doc. Cycle (PB)","is_empty_dev_point"],
   dev_backlog: ["User","Application","KPI","Request","Status SS","Status Project","Time Request","Deadline","Timeline","%Work Complete","PIC Dev","Dev Group","PIC BR","PIC Apps","Doc. Ref.","Status Dev","Review Sprint","Dev Sprint","ADOP Sprint","Weekly Report","Flag Sprint","Flag Tracking","Weekly Sprint","Remark"],
@@ -443,6 +399,7 @@ const APPS_TABS: TabConfig[] = [
   { key:"logix",        label:"Logix",          icon:"🚚", color:"bg-gray-100 text-gray-600", activeColor:"bg-orange-500 text-white", description:"Import data logistik dan pengiriman dari Logix",          section:"apps" },
 ]
 
+// RESOLVED: MDM_TABS dari main-v2
 const MDM_TABS: TabConfig[] = [
   { key:"mdm_setting", label:"Monitoring Setting", icon:"📐", color:"bg-gray-100 text-gray-600", activeColor:"bg-blue-500 text-white", description:"Upload data Monitoring Setting MDM dari file MDM_2026.xlsx — sheet 'Monitoring Setting 2026'", section:"mdm" },
 ]
@@ -493,26 +450,21 @@ const readFileForTab = async (tab: TabKey, file: File): Promise<{ jsonData: Reco
   }
   if (devSheetMap[tab]) {
     const targetSheet = devSheetMap[tab]
-    // Coba cari sheet by name (file BiWeekly lengkap), fallback ke sheet pertama (file sudah dipisah)
     const sheet = workbook.Sheets[targetSheet] ?? workbook.Sheets[workbook.SheetNames[0]]
     const isFromBiweekly = !!workbook.Sheets[targetSheet]
-    // BiWeekly punya baris title di row 0, file terpisah langsung header di row 0
     const range = isFromBiweekly ? 1 : 0
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, range })
     const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
     return { jsonData: cleaned, sheetName: workbook.SheetNames[0] }
   }
 
-  // Global tabs yang butuh sheet spesifik dari Monitoring_Size_DB_VM.xlsx
   const globalSheetMap: Record<string, string> = {
     global_pilot: "VM Drive Detail",
   }
   if (globalSheetMap[tab]) {
     const targetSheet = globalSheetMap[tab]
-    // Coba sheet spesifik dulu, kalau tidak ada coba sheet pertama
     const sheet = workbook.Sheets[targetSheet]
     if (!sheet) {
-      // Fallback: baca sheet pertama (mungkin user upload file yang sudah dipisah)
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: null })
       const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
@@ -551,7 +503,6 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
   const TABS        = section === "apps" ? APPS_TABS : section === "mdm" ? MDM_TABS : section === "dev" ? DEV_TABS : GLOBAL_TABS
   const sectionTabs = TABS
 
-  // Listen section change event dari sidebar layout
   useEffect(() => {
     const handler = (e: Event) => {
       const s = (e as CustomEvent<Section>).detail
@@ -583,7 +534,6 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     const { data, count } = await supabase.from(table).select("*", { count: "exact" }).range(0, 999)
     if (data) {
       setUploadStates((prev) => {
-        // Jangan timpa file yang sudah diupload user
         if (prev[activeTab]?.isFromUpload) return prev
         return {
           ...prev,
@@ -707,13 +657,11 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
           failedTabs.push(tabCfg.label)
           setTabErrors((prev) => ({ ...prev, [tab]: msg }))
           console.error(`Tab ${tabCfg.label} failed:`, msg)
-          // Lanjutkan ke tab berikutnya meskipun ada yang gagal
           processed += uploadStates[tab].data.length
           setProgress(Math.round((processed / totalRows) * 100))
         }
       }
 
-      // Reset hanya tab yang berhasil
       setUploadStates((prev) => {
         const next = { ...prev }
         sectionTabs.forEach((t) => {
@@ -740,7 +688,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     }
   }
 
-    const activeTabConfig = ALL_TABS.find((t) => t.key === activeTab)!
+  const activeTabConfig = ALL_TABS.find((t) => t.key === activeTab)!
   const currentState    = uploadStates[activeTab]
   const currentPage_    = currentPage[activeTab]
   const uploadedCount   = sectionTabs.filter((t) => uploadStates[t.key].isFromUpload).length
@@ -780,7 +728,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
         </div>
       )}
 
-            {/* DEV CONTEXT BANNER */}
+      {/* DEV CONTEXT BANNER */}
       {section === "dev" && (
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl p-5">
           <div className="flex items-center justify-between">
@@ -837,7 +785,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
                 className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm relative transition-all ${isActive ? tab.activeColor : tab.color} hover:opacity-90`}>
                 <span>{tab.icon}</span><span>{tab.label}</span>
                 {isDone && <span className="w-2 h-2 bg-green-400 rounded-full absolute -top-0.5 -right-0.5" />}
-              {tabErrors[tab.key] && <span className="w-2.5 h-2.5 bg-red-500 rounded-full absolute -top-1 -right-1 border-2 border-white" title="Upload gagal" />}
+                {tabErrors[tab.key] && <span className="w-2.5 h-2.5 bg-red-500 rounded-full absolute -top-1 -right-1 border-2 border-white" title="Upload gagal" />}
               </button>
             )
           })}
@@ -1042,7 +990,6 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               />
             </div>
             <p className="text-sm font-semibold text-gray-600">{progress}% selesai</p>
-            {/* Per-tab progress indicators */}
             <div className="flex gap-2 justify-center mt-4 flex-wrap">
               {sectionTabs.map((t) => {
                 const state = uploadStates[t.key]
@@ -1084,7 +1031,6 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
               </div>
               <button onClick={() => setToast(null)} className="text-gray-300 hover:text-gray-500 flex-shrink-0 text-lg leading-none">×</button>
             </div>
-            {/* Progress bar for auto-dismiss */}
             {(toast.type === "success" || toast.type === "info") && (
               <div className="mt-3 w-full bg-gray-100 rounded-full h-1 overflow-hidden">
                 <div className={`h-1 rounded-full ${toast.type === "success" ? "bg-green-400" : "bg-blue-400"}`}
