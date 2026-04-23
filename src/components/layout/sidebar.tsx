@@ -63,6 +63,7 @@ export default function Sidebar({ isOpen }: Props) {
               const dashboardPath: Record<string, string> = {
                 "SH-APPS": "/dashboard/apps",
                 "SH-APPC": "/dashboard/appc-sh",
+                "SH-MDM":  "/dashboard/mdm-sh",
               }
               const path = dashboardPath[role] || `/dashboard/${role.toLowerCase()}`
               router.push(path)

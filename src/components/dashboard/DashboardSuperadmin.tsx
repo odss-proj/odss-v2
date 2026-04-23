@@ -8,8 +8,8 @@ import { supabase } from "../../lib/supabase"
 type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
 type DevTabKey    = "dev_coda" | "dev_sprint" | "dev_backlog"
 type GlobalTabKey = "global_backup" | "global_restore" | "global_backlog" | "global_pilot" | "global_vm"
-type TabKey       = AppsTabKey | DevTabKey | GlobalTabKey
-type Section      = "apps" | "dev" | "global"
+type TabKey       = AppsTabKey | MdmTabKey | DevTabKey | GlobalTabKey
+type Section      = "apps" | "mdm" | "dev" | "global"
 
 type TabConfig = {
   key: TabKey; label: string; icon: string
@@ -34,6 +34,7 @@ const parsePercent = (val: unknown): number => {
   return 0
 }
 
+// RESOLVED: Menggunakan parseDate dari main (lebih robust & handles edge cases lebih baik)
 const parseDate = (val: unknown): string | null => {
   if (!val) return null
 
@@ -93,13 +94,14 @@ const parseDate = (val: unknown): string | null => {
   return null
 }
 
-const num  = (v: unknown) => (v !== null && v !== undefined && v !== "" ? Number(v) : null)
-const str  = (v: unknown) => (v !== null && v !== undefined ? String(v) : null)
+const num  = (v: unknown) => { if (v === null || v === undefined || v === "") return null; if (v instanceof Date) return null; const n = Number(v); return isNaN(n) ? null : n }
+const str  = (v: unknown) => { if (v === null || v === undefined) return null; if (v instanceof Date) return null; return String(v) }
 const bool = (v: unknown) => v === true || v === 1 || v === "TRUE" || v === "true"
 const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim()
 
 const getTableName = (tab: TabKey): string => {
   switch (tab) {
+    case "mdm_setting":    return "mdm_monitoring_setting"
     case "coda":           return "coda_main"
     case "dev_coda":       return "data_source_coda"
     case "dev_sprint":     return "data_source_dev_sprint"
@@ -136,6 +138,7 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       lama: num(r["LAMA"]), cut_off: parseDate(r["cut off"]), pekan: num(r["Pekan"]),
       prosentase: parsePercent(r["Prosentase"]),
     }))
+    // RESOLVED: Menggunakan date parsing clean dari main (tanpa conditional check redundant)
     case "logix": return data.map((r) => ({
       date_logs: parseDate(r["date_logs"]),
       email: str(r["email"]), id_user: r["id_user"], user_name: str(r["user"]),
@@ -165,6 +168,7 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       deskripsi_ticket: str(r["deskripsi_ticket"]), note_br: str(r["note_br"]),
       fileset: str(r["fileset"]), solved_by: str(r["solved_by"]),
     }))
+    // RESOLVED: Menggunakan date parsing clean dari main
     case "coda": return data.map((r) => ({
       flag_report: str(r["Flag Report"]), req_type: str(r["Req. Type"]),
       year_request: num(r["Year Request"]), quartal: str(r["Quartal"]),
@@ -188,6 +192,36 @@ const mapDataByTab = (tab: TabKey, data: Record<string, unknown>[]): Record<stri
       bobot_test1_2026: num(r["Bobot Test1 2026"]) ?? 0, test1_done_2026: num(r["Test1 Done 2026"]) ?? 0,
       bobot_test2_2026: num(r["Bobot Test2 2026"]) ?? 0, test2_done_2026: num(r["Test2 Done 2026"]) ?? 0,
       bobot_test3_2026: num(r["Bobot Test3 2026"]) ?? 0, test3_done_2026: num(r["Test3 Done 2026"]) ?? 0,
+    }))
+    // RESOLVED: MDM dari main-v2 dengan fix from → from_source
+    case "mdm_setting": return data.map((r) => ({
+      no:                   num(r["NO"]),
+      kode_ap:              str(r["KODE AP"]),
+      deskripsi:            str(r["DESKRIPSI"]),
+      jml_setting:          num(r["JML SETTING"]),
+      from_source:          str(r["FROM"]),           // FIX: was 'from' (reserved keyword)
+      kategori:             str(r["KATEGORI"]),
+      type:                 str(r["TYPE"]),
+      bobot_setting:        num(r["BOBOT SETTING"]),
+      global_div:           str(r["GLOBAL DIV"]),
+      div:                  str(r["DIV"]),
+      sub_div:              str(r["SUB DIV"]),
+      level:                str(r["LEVEL"]),
+      tgl_email:            parseDate(r["TGL EMAIL"]),
+      tgl_konfirmasi_akhir: parseDate(r["TGL KONFIRMASI AKHIR"]),
+      tgl_awal_program:     parseDate(r["TGL AWAL PROGRAM"]),
+      tgl_akhir_program:    parseDate(r["TGL AKHIR PROGRAM"]),
+      tgl_setting:          parseDate(r["TGL SETTING"]),
+      pic_setting:          str(r["PIC SETTING"]),
+      status:               str(r["STATUS"]),
+      tgl_controller:       parseDate(r["TGL CONTROLLER"]),
+      pic_controller:       str(r["PIC CONTROLLER"]),
+      status_controller:    str(r["STATUS CONTROLLER"]),
+      note_controller:      str(r["NOTE CONTROLLER"]),
+      tgl_release:          parseDate(r["TGL RELEASE"]),
+      pic_release:          str(r["PIC RELEASE"]),
+      status_release:       str(r["STATUS RELEASE"]),
+      note_release:         str(r["NOTE RELEASE"]),
     }))
     case "dev_coda": return data.map((r) => ({
       adop_project_backlog: str(r["ADOP Project Backlog"]), project: str(r["Project"]),
@@ -339,6 +373,7 @@ const getKey = (tab: TabKey, row: Record<string, unknown>): string => {
 
 const TEMPLATE_HEADERS: Record<TabKey, string[]> = {
   own_cloud: ["KODE SUBDIST","NAMA SUBDIST","DIVISI","TERITORY","AREA","GRSM","REGION","TAHUN","PERIODE","WEEK","KPI","% KEL H+3","% KEL H+7","% Ach","TOTAL SELISIH","KETERANGAN","ASSH","TAS"],
+  mdm_setting: ["NO","KODE AP","DESKRIPSI","JML SETTING","FROM","KATEGORI","TYPE","BOBOT SETTING","GLOBAL DIV","DIV","SUB DIV","LEVEL","TGL EMAIL","TGL KONFIRMASI AKHIR","TGL AWAL PROGRAM","TGL AKHIR PROGRAM","TGL SETTING","PIC SETTING","STATUS","TGL CONTROLLER","PIC CONTROLLER","STATUS CONTROLLER","NOTE CONTROLLER","TGL RELEASE","PIC RELEASE","STATUS RELEASE","NOTE RELEASE"],
   dt_transfer: ["Kode Subdist","Kd Plan","Nama Subdist","COVER","PIC","BAS","ASSH","Area","TAHUN","PERIODE","WEEK","KPI","% ACH"],
   monitoring_wf: ["SUBDIS_ID","SUBDIS_NAME","DIVISI","TYPE","KOTA","REGION","TAS","RELEASE","TGL TRANSFER TERAKHIR","LAMA","cut off","Pekan","Prosentase"],
   logix: ["date_logs","email","id_user","user","kd_branch","branch","pic_branch","nomor_ticket","ticket_created_date","ticket_created_detail","ticket_created_in_s","severity","type_supporting","sub_type_supporting","detail_issue","aplikasi","modul","menu","status_ticket","last_state","ticket_close_date","ticket_close_detail","ticket_close_in_s","ticket_durasi","ticket_durasi_in_s","default_respon_time","default_respon_time_by_severity","tas_pic","tas_respon_time","tas_respon_time_in_s","br_pic","br_respon_time","br_respon_time_in_s","dev_pic","dev_respon_time","dev_respon_time_in_s","durasi_ticket_hari","ticket_created_month","date_extract","ticket_in_s","judul_ticket","deskripsi_ticket","note_br","fileset","solved_by"],
@@ -378,11 +413,11 @@ const GLOBAL_TABS: TabConfig[] = [
   { key:"global_vm",      label:"Global Area CNS",      icon:"🗺️", color:"bg-gray-100 text-gray-600", activeColor:"bg-cyan-500 text-white",   description:"Upload Area_Cover_CNS_Merged.xlsx — gabungan Area Cover + BOM ROM NOM + List CNS Aktif", section:"global" },
 ]
 
-const ALL_TABS = [...APPS_TABS, ...DEV_TABS, ...GLOBAL_TABS]
+const ALL_TABS = [...APPS_TABS, ...MDM_TABS, ...DEV_TABS, ...GLOBAL_TABS]
 
 const readFileForTab = async (tab: TabKey, file: File): Promise<{ jsonData: Record<string, unknown>[]; sheetName: string }> => {
   const buffer   = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer)
+  const workbook = XLSX.read(buffer, { cellDates: true, dateNF: 'yyyy-mm-dd' })
 
   if (tab === "coda") {
     const sourceSheet = workbook.Sheets["Source 2025 + 2026.W15"]
@@ -410,26 +445,21 @@ const readFileForTab = async (tab: TabKey, file: File): Promise<{ jsonData: Reco
   }
   if (devSheetMap[tab]) {
     const targetSheet = devSheetMap[tab]
-    // Coba cari sheet by name (file BiWeekly lengkap), fallback ke sheet pertama (file sudah dipisah)
     const sheet = workbook.Sheets[targetSheet] ?? workbook.Sheets[workbook.SheetNames[0]]
     const isFromBiweekly = !!workbook.Sheets[targetSheet]
-    // BiWeekly punya baris title di row 0, file terpisah langsung header di row 0
     const range = isFromBiweekly ? 1 : 0
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, range })
     const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
     return { jsonData: cleaned, sheetName: workbook.SheetNames[0] }
   }
 
-  // Global tabs yang butuh sheet spesifik dari Monitoring_Size_DB_VM.xlsx
   const globalSheetMap: Record<string, string> = {
     global_pilot: "VM Drive Detail",
   }
   if (globalSheetMap[tab]) {
     const targetSheet = globalSheetMap[tab]
-    // Coba sheet spesifik dulu, kalau tidak ada coba sheet pertama
     const sheet = workbook.Sheets[targetSheet]
     if (!sheet) {
-      // Fallback: baca sheet pertama (mungkin user upload file yang sudah dipisah)
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: null })
       const cleaned  = jsonData.filter((r) => Object.values(r).some((v) => v !== null && v !== undefined && v !== ""))
@@ -451,6 +481,9 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
   const [activeTab,    setActiveTab]    = useState<TabKey>("dt_transfer")
   const [lastUpdate,   setLastUpdate]   = useState<Date | null>(null)
   const [isSending,    setIsSending]    = useState(false)
+  const [toast,        setToast]        = useState<{ type: "success"|"error"|"warning"|"info"; title: string; message: string } | null>(null)
+  const [showLogout,   setShowLogout]   = useState(false)
+  const [tabErrors,    setTabErrors]    = useState<Record<string, string>>({})
   const [progress,     setProgress]     = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const ROWS_PER_PAGE = 10
@@ -462,15 +495,14 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     () => Object.fromEntries(ALL_TABS.map((t) => [t.key, 1])) as Record<TabKey, number>
   )
 
-  const TABS        = section === "apps" ? APPS_TABS : section === "dev" ? DEV_TABS : GLOBAL_TABS
+  const TABS        = section === "apps" ? APPS_TABS : section === "mdm" ? MDM_TABS : section === "dev" ? DEV_TABS : GLOBAL_TABS
   const sectionTabs = TABS
 
-  // Listen section change event dari sidebar layout
   useEffect(() => {
     const handler = (e: Event) => {
       const s = (e as CustomEvent<Section>).detail
       setSection(s)
-      if (s === "apps") setActiveTab("dt_transfer"); else if (s === "dev") setActiveTab("dev_coda"); else setActiveTab("global_backup")
+      if (s === "apps") setActiveTab("dt_transfer"); else if (s === "mdm") setActiveTab("mdm_setting"); else if (s === "dev") setActiveTab("dev_coda"); else setActiveTab("global_backup")
     }
     window.addEventListener("superadmin-section", handler)
     return () => window.removeEventListener("superadmin-section", handler)
@@ -496,10 +528,20 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
     const table = getTableName(activeTab)
     const { data, count } = await supabase.from(table).select("*", { count: "exact" }).range(0, 999)
     if (data) {
-      setUploadStates((prev) => ({
-        ...prev,
-        [activeTab]: { ...prev[activeTab], data, headers: Object.keys(data[0] || {}), rowCount: count || 0, status: "idle", isFromUpload: false },
-      }))
+      setUploadStates((prev) => {
+        if (prev[activeTab]?.isFromUpload) return prev
+        return {
+          ...prev,
+          [activeTab]: { ...prev[activeTab], data, headers: Object.keys(data[0] || {}), rowCount: count || 0, status: "idle", isFromUpload: false },
+        }
+      })
+    }
+  }
+
+  const showToast = (type: "success"|"error"|"warning"|"info", title: string, message: string) => {
+    setToast({ type, title, message })
+    if (type === "success" || type === "info") {
+      setTimeout(() => setToast(null), 4000)
     }
   }
 
@@ -542,52 +584,98 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
 
   const sendToDatabase = async () => {
     const hasUpload = sectionTabs.some((t) => uploadStates[t.key].isFromUpload)
-    if (!hasUpload) { alert("❌ Belum ada file yang diupload"); return }
+    if (!hasUpload) { showToast("warning", "Tidak Ada File", "Belum ada file yang diupload untuk dikirim ke database."); return }
     try {
-      setIsSending(true); setProgress(0)
+      setIsSending(true); setProgress(0); setTabErrors({})
       let totalRows = 0, processed = 0
       sectionTabs.forEach((t) => { if (uploadStates[t.key].status === "success") totalRows += uploadStates[t.key].data.length })
+
+      const failedTabs: string[] = []
+      const successTabs: string[] = []
 
       for (const tabCfg of sectionTabs) {
         const tab   = tabCfg.key
         const state = uploadStates[tab]
         if (state.status !== "success") continue
-        const table = getTableName(tab)
-        const { data: existing } = await supabase.from(table).select("*")
-        const mapped       = mapDataByTab(tab, state.data)
-        const existingKeys = new Set((existing || []).map((r) => getKey(tab, r as Record<string, unknown>)))
-        const newData      = mapped.filter((r) => !existingKeys.has(getKey(tab, r)))
-        if (newData.length === 0) { console.log(`⚠️ ${tab}: tidak ada data baru`); continue }
 
-        for (let i = 0; i < newData.length; i += 500) {
-          const chunk = newData.slice(i, i + 500)
-          const res   = await fetch(
-            "https://jytxkqhuwtnmbycxkzdv.functions.supabase.co/upload-data",
-            {
-              method: "POST", mode: "cors",
-              headers: {
-                "Content-Type": "application/json",
-                "apikey":        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
-                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
-              },
-              body: JSON.stringify({ table, data: chunk }),
+        try {
+          const table = getTableName(tab)
+          const { data: existing } = await supabase.from(table).select("*")
+          const mapped       = mapDataByTab(tab, state.data)
+          const existingKeys = new Set((existing || []).map((r) => getKey(tab, r as Record<string, unknown>)))
+          const newData      = mapped.filter((r) => !existingKeys.has(getKey(tab, r)))
+
+          if (newData.length === 0) {
+            console.log(`⚠️ ${tab}: tidak ada data baru`)
+            processed += state.data.length
+            setProgress(Math.round((processed / totalRows) * 100))
+            successTabs.push(tabCfg.label)
+            continue
+          }
+
+          let tabProcessed = 0
+          for (let i = 0; i < newData.length; i += 500) {
+            const chunk = newData.slice(i, i + 500)
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 60000)
+            try {
+              const res = await fetch(
+                "https://jytxkqhuwtnmbycxkzdv.functions.supabase.co/upload-data",
+                {
+                  method: "POST", mode: "cors",
+                  signal: controller.signal,
+                  headers: {
+                    "Content-Type": "application/json",
+                    "apikey":        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dHhrcWh1d3RubWJ5Y3hremR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDY1MTEsImV4cCI6MjA5MDI4MjUxMX0.sPYop1Sp4RA63kpxEfSYEz5wl8tIpzby1bCCPwntRV8",
+                  },
+                  body: JSON.stringify({ table, data: chunk }),
+                }
+              )
+              clearTimeout(timeout)
+              if (!res.ok) {
+                const result = await res.json().catch(() => ({}))
+                throw new Error(result.error || `HTTP ${res.status}`)
+              }
+              tabProcessed += chunk.length
+              processed += chunk.length
+              setProgress(Math.round((processed / totalRows) * 100))
+            } catch (chunkErr: unknown) {
+              clearTimeout(timeout)
+              const msg = chunkErr instanceof Error ? chunkErr.message : "Unknown error"
+              throw new Error(`[${tabCfg.label}] ${msg}`)
             }
-          )
-          if (!res.ok) { const result = await res.json(); throw new Error(result.error || "Upload gagal") }
-          processed += chunk.length
+          }
+          successTabs.push(tabCfg.label)
+        } catch (tabErr: unknown) {
+          const msg = tabErr instanceof Error ? tabErr.message : "Unknown error"
+          failedTabs.push(tabCfg.label)
+          setTabErrors((prev) => ({ ...prev, [tab]: msg }))
+          console.error(`Tab ${tabCfg.label} failed:`, msg)
+          processed += uploadStates[tab].data.length
           setProgress(Math.round((processed / totalRows) * 100))
         }
       }
 
       setUploadStates((prev) => {
         const next = { ...prev }
-        sectionTabs.forEach((t) => { next[t.key] = { ...initialUploadState } })
+        sectionTabs.forEach((t) => {
+          if (!failedTabs.includes(t.label)) next[t.key] = { ...initialUploadState }
+        })
         return next
       })
-      alert(`✅ Data ${section === "apps" ? "APPS" : section === "dev" ? "Developer" : "Global PHI"} berhasil dikirim ke database`)
+
+      if (failedTabs.length === 0) {
+        showToast("success", "Berhasil!", `Semua data ${section === "apps" ? "APPS" : section === "mdm" ? "MDM" : section === "dev" ? "Developer" : "Global PHI"} berhasil dikirim ke database.`)
+      } else if (successTabs.length > 0) {
+        showToast("warning", "Sebagian Berhasil", `✅ Berhasil: ${successTabs.join(", ")}\n❌ Gagal: ${failedTabs.join(", ")}`)
+      } else {
+        showToast("error", "Gagal!", `Semua modul gagal dikirim: ${failedTabs.join(", ")}`)
+      }
+
       await fetchData()
     } catch (err: unknown) {
-      alert(`❌ ${err instanceof Error ? err.message : "Unknown error"}`)
+      showToast("error", "Error", err instanceof Error ? err.message : "Unknown error")
     } finally {
       setIsSending(false)
       setLastUpdate(new Date())
@@ -611,6 +699,29 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
         <h2 className="text-xl font-bold">Super Admin — Upload Data</h2>
         <p className="text-sm opacity-80 mt-1">Kelola dan upload semua data KPI ke database</p>
       </div>
+
+      {/* MDM CONTEXT BANNER */}
+      {section === "mdm" && (
+        <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-2xl p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Upload Monitoring Setting MDM</h2>
+              <p className="text-sm opacity-80 mt-1">Upload file <strong>MDM_2026.xlsx</strong> — sheet <em>Monitoring Setting 2026</em></p>
+            </div>
+            <div className="text-5xl opacity-20">📐</div>
+          </div>
+          <div className="flex gap-3 mt-4 flex-wrap">
+            {MDM_TABS.map((t) => {
+              const done = uploadStates[t.key].isFromUpload
+              return (
+                <div key={t.key} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${done ? "bg-white text-blue-700" : "bg-white/20 text-white"}`}>
+                  {t.icon} {done ? "✅" : "⏳"} {t.label}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* DEV CONTEXT BANNER */}
       {section === "dev" && (
@@ -669,6 +780,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
                 className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm relative transition-all ${isActive ? tab.activeColor : tab.color} hover:opacity-90`}>
                 <span>{tab.icon}</span><span>{tab.label}</span>
                 {isDone && <span className="w-2 h-2 bg-green-400 rounded-full absolute -top-0.5 -right-0.5" />}
+                {tabErrors[tab.key] && <span className="w-2.5 h-2.5 bg-red-500 rounded-full absolute -top-1 -right-1 border-2 border-white" title="Upload gagal" />}
               </button>
             )
           })}
@@ -684,7 +796,7 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
             <span>{formatTime(lastUpdate)}</span>
           </div>
           <button disabled={!isAllUploaded} onClick={sendToDatabase}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${isAllUploaded ? (section === "apps" ? "bg-green-500 text-white hover:bg-green-600" : "bg-indigo-500 text-white hover:bg-indigo-600") : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+            className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${isAllUploaded ? (section === "apps" ? "bg-green-500 text-white hover:bg-green-600" : section === "mdm" ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-indigo-500 text-white hover:bg-indigo-600") : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
             {isAllUploaded ? "🚀 Send to DB" : `⏳ Upload ${uploadedCount}/${sectionTabs.length}`}
           </button>
         </div>
@@ -708,6 +820,19 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
           </div>
         ))}
       </div>
+
+      {/* TAB ERROR BANNER */}
+      {tabErrors[activeTab] && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-red-500 text-xl flex-shrink-0">❌</span>
+          <div>
+            <p className="font-semibold text-red-700 text-sm">Modul {activeTabConfig.label} gagal dikirim</p>
+            <p className="text-xs text-red-500 mt-0.5">{tabErrors[activeTab]}</p>
+            <button onClick={() => setTabErrors((p) => { const n={...p}; delete n[activeTab]; return n })}
+              className="text-xs text-red-400 underline mt-1 hover:text-red-600">Tutup</button>
+          </div>
+        </div>
+      )}
 
       {/* UPLOAD SECTION */}
       <div className="bg-white rounded-2xl border p-6">
@@ -846,17 +971,104 @@ export default function DashboardSuperadmin({ userName = "superadmin" }: { userN
 
       {/* SENDING OVERLAY */}
       {isSending && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-[320px] shadow-xl text-center">
-            <div className="text-3xl mb-2">🚀</div>
-            <h2 className="font-semibold text-gray-800 mb-2">Mengirim Data {section === "apps" ? "APPS" : section === "dev" ? "Developer" : "Global PHI"} ke Database</h2>
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
-              <div className={`h-3 transition-all duration-300 ${section === "apps" ? "bg-green-500" : section === "dev" ? "bg-indigo-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 w-[360px] shadow-2xl text-center">
+            <div className="text-5xl mb-3 animate-bounce">🚀</div>
+            <h2 className="font-bold text-gray-800 text-lg mb-1">
+              Mengirim Data {section === "apps" ? "APPS" : section === "mdm" ? "MDM" : section === "dev" ? "Developer" : "Global PHI"}
+            </h2>
+            <p className="text-sm text-gray-400 mb-4">Harap tunggu, jangan tutup halaman ini</p>
+            <div className="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden">
+              <div
+                className={`h-4 rounded-full transition-all duration-300 ${section === "apps" ? "bg-gradient-to-r from-green-400 to-teal-500" : section === "dev" ? "bg-gradient-to-r from-indigo-400 to-purple-500" : "bg-gradient-to-r from-sky-400 to-teal-500"}`}
+                style={{ width: `${progress}%` }}
+              />
             </div>
-            <p className="text-sm text-gray-600">{progress}% selesai</p>
+            <p className="text-sm font-semibold text-gray-600">{progress}% selesai</p>
+            <div className="flex gap-2 justify-center mt-4 flex-wrap">
+              {sectionTabs.map((t) => {
+                const state = uploadStates[t.key]
+                const hasError = tabErrors[t.key]
+                return (
+                  <div key={t.key} className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                    hasError ? "bg-red-100 text-red-600" :
+                    state.isFromUpload ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
+                  }`}>
+                    {hasError ? "❌" : state.isFromUpload ? "✅" : "⏳"} {t.label}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-2" style={{animation: "slideUp 0.3s ease"}}>
+          <div className={`rounded-2xl shadow-2xl p-5 min-w-[320px] max-w-[420px] border-l-4 ${
+            toast.type === "success" ? "bg-white border-green-500" :
+            toast.type === "error"   ? "bg-white border-red-500"   :
+            toast.type === "warning" ? "bg-white border-yellow-500" :
+                                       "bg-white border-blue-500"
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className="text-2xl flex-shrink-0">
+                {toast.type === "success" ? "✅" : toast.type === "error" ? "❌" : toast.type === "warning" ? "⚠️" : "ℹ️"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-bold text-sm ${
+                  toast.type === "success" ? "text-green-700" :
+                  toast.type === "error"   ? "text-red-700"   :
+                  toast.type === "warning" ? "text-yellow-700" : "text-blue-700"
+                }`}>{toast.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{toast.message}</p>
+              </div>
+              <button onClick={() => setToast(null)} className="text-gray-300 hover:text-gray-500 flex-shrink-0 text-lg leading-none">×</button>
+            </div>
+            {(toast.type === "success" || toast.type === "info") && (
+              <div className="mt-3 w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                <div className={`h-1 rounded-full ${toast.type === "success" ? "bg-green-400" : "bg-blue-400"}`}
+                  style={{ animation: "shrink 4s linear forwards" }} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* LOGOUT CONFIRM MODAL */}
+      {showLogout && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 w-[360px] shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🚪</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Keluar dari ODSS?</h2>
+            <p className="text-sm text-gray-400 mb-6">Anda akan keluar dari sesi superadmin. Data yang belum dikirim akan hilang.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogout(false)}
+                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-all">
+                Batal
+              </button>
+              <button onClick={async () => { setShowLogout(false); await supabase.auth.signOut(); window.location.href = "/login" }}
+                className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all">
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shrink {
+          from { width: 100%; }
+          to   { width: 0%; }
+        }
+      `}</style>
     </div>
   )
 }

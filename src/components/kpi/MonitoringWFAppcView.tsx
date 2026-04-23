@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
-const EXCLUDED_TAS = ["ALIF", "REVINDA", "ANAS", "GALIH", "ALDI", "YOSHI", "FAJAR", "HERMANTO", "IRSYAD", "ASEP"]
+const APPC_TEAM = ["FAJRUL", "ASWAN", "IHSAN", "BRELY", "TAUFIK", "ACHMAD", "AANG"]
 
 type WFRow = {
   subdis_id: number
@@ -102,7 +102,7 @@ export default function MonitoringWFAppcView() {
       })
 
       const filtered_raw = normalized.filter(
-        (r) => r.region !== "CNS" && !EXCLUDED_TAS.includes(r.tas)
+        (r) => r.region === "CNS" && APPC_TEAM.includes(r.tas)
       )
       setData(filtered_raw)
       setLoading(false)
@@ -127,7 +127,7 @@ export default function MonitoringWFAppcView() {
   const earlyCount = filtered.filter((r) => r.lama > 0).length      // sebelum cut off = belum/lebih awal
 
   // By region
-  const regionStats: RegionStat[] = ["EAST", "WEST", "CENTRAL"].map((region) => {
+  const regionStats: RegionStat[] = ["CNS"].map((region) => {
     const rows = filtered.filter((r) => r.region === region)
     return {
       region,
@@ -192,7 +192,7 @@ export default function MonitoringWFAppcView() {
       <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-2xl border">
         <span className="text-sm font-medium text-gray-500">Filter:</span>
         <div className="flex gap-2">
-          {["ALL", "EAST", "WEST", "CENTRAL"].map((r) => (
+          {["ALL", "CNS"].map((r) => (
             <button key={r} onClick={() => setFilterRegion(r)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${filterRegion === r ? "bg-indigo-500 text-white border-indigo-500" : "bg-white text-gray-500 border-gray-200 hover:border-indigo-300"}`}>
               {r}
