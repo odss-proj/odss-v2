@@ -184,124 +184,11 @@ function LogixModal({ row, onClose }: { row:LogixRow|null; onClose:()=>void }) {
   )
 }
 
-// ── Member detail modal ────────────────────────────────────────────
-function MemberModal({ member, docs, tickets, onClose }: { member:typeof BR_MEMBERS[0]|null; docs:CodaRow[]; tickets:LogixRow[]; onClose:()=>void }) {
-  if (!member) return null
-  const done   = docs.filter(r=>["PILOT","RELEASE","DONE"].includes((r.status_dev||"").toUpperCase())).length
-  const pilot  = docs.filter(r=>(r.pilot||"").trim()!=="").length
-  const closed = tickets.filter(r=>(r.status_ticket||"").toLowerCase().includes("close")).length
-  const avgR   = tickets.length>0?Math.round(tickets.reduce((a,r)=>a+(r.br_respon_time_in_s||0),0)/tickets.length):0
-  const byApp  = Object.entries(docs.reduce((a,r)=>{ a[r.application||"Unknown"]=(a[r.application||"Unknown"]||0)+1; return a },{}as Record<string,number>))
-    .map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value).slice(0,6)
-  const bySt   = Object.entries(docs.reduce((a,r)=>{ a[r.status_dev||"?"]=(a[r.status_dev||"?"]||0)+1; return a },{}as Record<string,number>))
-    .map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value)
-  const bySev  = Object.entries(tickets.reduce((a,r)=>{ a[r.severity||"?"]=(a[r.severity||"?"]||0)+1; return a },{}as Record<string,number>))
-    .map(([name,value])=>({name,value}))
-  return (
-    <Modal open title={`${member.emoji} Produktivitas — ${member.name}`} onClose={onClose} wide>
-      <div className="grid grid-cols-5 gap-3 mb-5">
-        {[{l:"Total Dok",v:docs.length,i:"📄"},{l:"Done",v:done,i:"✅"},{l:"Pilot",v:pilot,i:"✈️"},{l:"Total Tiket",v:tickets.length,i:"🎫"},{l:"Closed",v:closed,i:"🔒"}].map(s=>(
-          <div key={s.l} className="rounded-xl p-3 text-center border" style={{ borderColor:`${member.color}30`,backgroundColor:`${member.color}08` }}>
-            <div className="text-xl">{s.i}</div>
-            <div className="text-2xl font-black mt-1" style={{ color:member.color }}>{s.v}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{s.l}</div>
-          </div>
-        ))}
-      </div>
-      {/* Grade inline in modal — computed from props */}
-      {(() => {
-        const gradeData = calculateGrades([{
-          name:member.name, totalDok:docs.length,
-          doneDok:docs.filter(r=>["PILOT","RELEASE","DONE"].includes((r.status_dev||"").toUpperCase())).length,
-          pilotCount:docs.filter(r=>(r.pilot||"").trim()!=="").length,
-          bobotTesting:Math.round(docs.reduce((a,r)=>a+(r.bobot_test1_2026||0)+(r.bobot_test2_2026||0)+(r.bobot_test3_2026||0),0)),
-          bobotDone:Math.round(docs.reduce((a,r)=>a+(r.test1_done_2026||0)+(r.test2_done_2026||0)+(r.test3_done_2026||0),0)),
-          totalTicket:tickets.length,
-          closedTicket:tickets.filter(r=>(r.status_ticket||"").toLowerCase().includes("close")).length
-        }])
-        const g = gradeData[0]
-        if (!g) return null
-        const cfg = GRADE_CONFIG[g.grade]
-        return (
-          <div className={`flex items-center gap-4 p-4 rounded-2xl text-white bg-gradient-to-r ${cfg.bg} mb-5`}>
-            <div className="text-5xl font-black leading-none">{g.grade}</div>
-            <div className="flex-1">
-              <p className="font-bold">{cfg.text} · Score {g.totalScore}/100</p>
-              <p className="text-xs opacity-80 mt-0.5">{cfg.emoji} {GRADE_CONFIG[g.grade].msg}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-70">Done Rate</p>
-              <p className="font-bold">{Math.round(g.scoreDoneRate)}%</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-70">Bobot Test</p>
-              <p className="font-bold">{Math.round(g.scoreBobot)}%</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-70">Ticket Close</p>
-              <p className="font-bold">{Math.round(g.scoreTicketClose)}%</p>
-            </div>
-          </div>
-        )
-      })()}
-      {[{label:"Done Rate",v:pct(done,docs.length),c:member.color},{label:"Ticket Close Rate",v:pct(closed,tickets.length),c:"#10b981"}].map(b=>(
-        <div key={b.label} className="mb-4">
-          <div className="flex justify-between text-xs mb-1"><span className="text-gray-500 font-medium">{b.label}</span><span className="font-bold" style={{ color:b.c }}>{b.v}%</span></div>
-          <div className="w-full bg-gray-100 rounded-full h-3"><div className="h-3 rounded-full" style={{ width:`${b.v}%`,backgroundColor:b.c }}/></div>
-        </div>
-      ))}
-      <div className="grid grid-cols-3 gap-5 mt-2">
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Top Aplikasi</p>
-          {byApp.map((a,i)=>(
-            <div key={a.name} className="flex items-center gap-2 mb-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor:CHART_COLORS[i%CHART_COLORS.length] }}/>
-              <span className="text-xs text-gray-600 flex-1 truncate">{a.name}</span>
-              <span className="text-xs font-bold text-gray-700">{a.value}</span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Status Dokumen</p>
-          {bySt.map(s=>(
-            <div key={s.name} className="flex items-center gap-2 mb-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor:SDC[(s.name||"").toUpperCase()]||"#9ca3af" }}/>
-              <span className="text-xs text-gray-600 flex-1">{s.name}</span>
-              <span className="text-xs font-bold text-gray-700">{s.value}</span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Severity Tiket</p>
-          {bySev.length>0 ? bySev.map(s=>(
-            <div key={s.name} className="flex items-center gap-2 mb-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor:SVC[s.name]||"#9ca3af" }}/>
-              <span className="text-xs text-gray-600 flex-1">{s.name}</span>
-              <span className="text-xs font-bold text-gray-700">{s.value}</span>
-            </div>
-          )) : <p className="text-xs text-gray-400">Tidak ada tiket</p>}
-          {avgR>0 && <div className="mt-3 pt-3 border-t"><p className="text-xs text-gray-400">Avg Respon BR</p><p className="text-sm font-bold text-gray-700">{sToHms(avgR)}</p></div>}
-        </div>
-      </div>
-      {byApp.length>0 && (
-        <div className="mt-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distribusi Aplikasi</p>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={byApp}><XAxis dataKey="name" tick={{ fontSize:10 }}/><YAxis tick={{ fontSize:10 }}/><Tooltip/>
-              <Bar dataKey="value" name="Dok" radius={[6,6,0,0]}>{byApp.map((_,i)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}</Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </Modal>
-  )
-}
-
 // ── Search bar ─────────────────────────────────────────────────────
 function SearchBar({ search, onSearch, filters, onFilter, filterOpts }: {
-  search:string; onSearch:(v:string)=>void
-  filters:Record<string,string>; onFilter:(k:string,v:string)=>void
-  filterOpts:{ key:string; label:string; options:string[] }[]
+  search: string; onSearch: (v:string)=>void
+  filters: Record<string,string>; onFilter: (k:string,v:string)=>void
+  filterOpts: { key:string; label:string; options:string[] }[]
 }) {
   const hasFilter = search || Object.values(filters).some(Boolean)
   return (
@@ -326,6 +213,219 @@ function SearchBar({ search, onSearch, filters, onFilter, filterOpts }: {
   )
 }
 
+// ── Unified Member Modal ─────────────────────────────────────────
+function UnifiedMemberModal({ member, docs, tickets, grade, onClose }: {
+  member: typeof BR_MEMBERS[0] | null
+  docs: CodaRow[]; tickets: LogixRow[]
+  grade: GradeResult | null; onClose: () => void
+}) {
+  if (!member) return null
+  const cfg    = grade ? GRADE_CONFIG[grade.grade] : GRADE_CONFIG["D"]
+  const done   = docs.filter(r => ["PILOT","RELEASE","DONE"].includes((r.status_dev||"").toUpperCase())).length
+  const pilot  = docs.filter(r => (r.pilot||"").trim() !== "").length
+  const closed = tickets.filter(r => (r.status_ticket||"").toLowerCase().includes("close")).length
+  const avgR   = tickets.length > 0 ? Math.round(tickets.reduce((a,r)=>a+(r.br_respon_time_in_s||0),0)/tickets.length) : 0
+
+  const byApp = Object.entries(docs.reduce((a,r)=>{ a[r.application||"Unknown"]=(a[r.application||"Unknown"]||0)+1; return a },{}as Record<string,number>))
+    .map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v).slice(0,6)
+  const byStatus = Object.entries(docs.reduce((a,r)=>{ a[r.status_dev||"?"]=(a[r.status_dev||"?"]||0)+1; return a },{}as Record<string,number>))
+    .map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v)
+  const bySev = Object.entries(tickets.reduce((a,r)=>{ a[r.severity||"?"]=(a[r.severity||"?"]||0)+1; return a },{}as Record<string,number>))
+    .map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v)
+  const recentDocs    = [...docs].sort((a,b)=>(b.year_request||0)-(a.year_request||0)).slice(0,5)
+  const recentTickets = tickets.slice(0,5)
+
+  const scoreMetrics = grade ? [
+    { label:"Done Rate",     score:Math.round(grade.scoreDoneRate),    raw:`${grade.doneDok}/${grade.totalDok}`,        w:30, icon:"✅" },
+    { label:"Bobot Testing", score:Math.round(grade.scoreBobot),       raw:`${grade.bobotDone}/${grade.bobotTesting}`,  w:25, icon:"⚖️" },
+    { label:"Pilot",         score:Math.round(grade.scorePilot),       raw:`${grade.pilotCount} dok`,                   w:20, icon:"✈️" },
+    { label:"Ticket Close",  score:Math.round(grade.scoreTicketClose), raw:`${grade.closedTicket}/${grade.totalTicket}`,w:15, icon:"🎫" },
+    { label:"Volume Dok",    score:Math.round(grade.scoreTotalDok),    raw:`${grade.totalDok} dok`,                     w:10, icon:"📄" },
+  ] : []
+
+  const scoreColor = (s:number) => s>=75?"#10b981":s>=55?"#3b82f6":s>=35?"#f59e0b":"#ef4444"
+
+  return (
+    <Modal open title={`${member.emoji} ${member.name}`} onClose={onClose} wide>
+
+      {/* ── TOP: Grade hero strip ── */}
+      <div className={`-mx-6 -mt-2 px-6 py-4 text-white bg-gradient-to-r ${cfg.bg} mb-5 flex items-center gap-5`}>
+        {/* Grade letter */}
+        <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-5xl font-black backdrop-blur-sm shrink-0">
+          {grade?.grade||"—"}
+        </div>
+        {/* Info */}
+        <div className="flex-1">
+          <p className="font-black text-lg leading-tight">{cfg.emoji} {cfg.text}</p>
+          <p className="text-xs opacity-75 mt-0.5">{cfg.msg}</p>
+          {/* Score bar */}
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 bg-white/30 rounded-full h-2">
+              <div className="h-2 rounded-full bg-white transition-all" style={{ width:`${grade?.totalScore||0}%` }}/>
+            </div>
+            <span className="text-xs font-black opacity-90">{grade?.totalScore||0}/100</span>
+          </div>
+        </div>
+        {/* Stats row */}
+        <div className="flex gap-4 text-center shrink-0">
+          {[
+            { v:`#${grade?.rank||"—"}`, l:"Ranking"    },
+            { v:docs.length,            l:"Total Dok"  },
+            { v:`${done}/${docs.length}`,l:"Done"      },
+            { v:pilot,                  l:"Pilot"      },
+            { v:`${closed}/${tickets.length}`, l:"Tiket Close" },
+            { v:sToHms(avgR),           l:"Avg Respon" },
+          ].map(s=>(
+            <div key={s.l} className="bg-white/15 rounded-xl px-3 py-2 backdrop-blur-sm min-w-[60px]">
+              <p className="text-base font-black leading-tight">{s.v}</p>
+              <p className="text-xs opacity-70 mt-0.5">{s.l}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── MIDDLE: 3 columns ── */}
+      <div className="grid grid-cols-3 gap-4 mb-5">
+
+        {/* Col 1: Score breakdown */}
+        <div className="col-span-1">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Score Breakdown</p>
+          <div className="space-y-2">
+            {scoreMetrics.map(m => (
+              <div key={m.label}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs text-gray-600">{m.icon} {m.label} <span className="text-gray-400">·{m.w}%</span></span>
+                  <span className="text-xs font-black" style={{ color:scoreColor(m.score) }}>{m.score}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className="h-2 rounded-full" style={{ width:`${m.score}%`, backgroundColor:scoreColor(m.score) }}/>
+                  </div>
+                  <span className="text-xs text-gray-400 w-14 text-right shrink-0">{m.raw}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 p-2 bg-indigo-50 rounded-lg">
+            <p className="text-xs text-indigo-500 leading-relaxed">A≥75 · B≥55 · C≥35 · D&lt;35</p>
+          </div>
+        </div>
+
+        {/* Col 2: Top Apps */}
+        <div className="col-span-1">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📦 Aplikasi</p>
+          <div className="space-y-2">
+            {byApp.length > 0 ? byApp.map((a,i)=>(
+              <div key={a.n} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor:CHART_COLORS[i%CHART_COLORS.length] }}/>
+                <span className="text-xs text-gray-700 flex-1 truncate font-medium">{a.n}</span>
+                <span className="text-xs font-black px-1.5 py-0.5 rounded" style={{ backgroundColor:`${CHART_COLORS[i%CHART_COLORS.length]}20`, color:CHART_COLORS[i%CHART_COLORS.length] }}>{a.v}</span>
+              </div>
+            )) : <p className="text-xs text-gray-400 italic">Tidak ada dokumen</p>}
+          </div>
+          <div className="mt-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">📋 Status</p>
+            <div className="flex flex-wrap gap-1">
+              {byStatus.map(s=>{
+                const c = (SDC as Record<string,string>)[(s.n||"").toUpperCase()]||"#6b7280"
+                return <div key={s.n} className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor:`${c}18`,color:c }}>{s.n} {s.v}</div>
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Col 3: Service */}
+        <div className="col-span-1">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🎫 Service Level</p>
+          {bySev.length > 0 ? (
+            <div className="space-y-2 mb-3">
+              {bySev.map(s=>{
+                const c=(SVC as Record<string,string>)[s.n]||"#6b7280"
+                return (
+                  <div key={s.n} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor:c }}/>
+                    <span className="text-xs text-gray-700 flex-1">{s.n}</span>
+                    <span className="text-xs font-black" style={{ color:c }}>{s.v}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : <p className="text-xs text-gray-400 italic mb-3">Tidak ada tiket</p>}
+          {/* SLA mini cards */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label:"Total",    val:tickets.length,    color:"#6366f1" },
+              { label:"Closed",   val:closed,            color:"#10b981" },
+              { label:"Open",     val:tickets.length-closed, color:"#f59e0b" },
+              { label:"Avg Resp", val:sToHms(avgR),      color:"#8b5cf6" },
+            ].map(s=>(
+              <div key={s.label} className="rounded-xl p-2.5 text-center border">
+                <p className="text-sm font-black" style={{ color:s.color }}>{s.val}</p>
+                <p className="text-xs text-gray-400">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM: Recent tables side by side ── */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Recent Docs */}
+        <div>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">📄 Dokumen Terkini</p>
+          {recentDocs.length > 0 ? (
+            <div className="rounded-xl border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead><tr className="bg-gray-50 border-b">
+                  {["Nama","Aplikasi","Status","✈️"].map(h=><th key={h} className="px-2 py-2 text-left text-gray-400 font-semibold">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {recentDocs.map((r,i)=>(
+                    <tr key={i} className={`border-b last:border-0 ${i%2===0?"bg-white":"bg-gray-50/30"}`}>
+                      <td className="px-2 py-1.5 font-medium text-gray-700 max-w-[120px] truncate">{r.doc_name||"—"}</td>
+                      <td className="px-2 py-1.5"><span className="px-1 py-0.5 rounded bg-indigo-50 text-indigo-600 text-xs">{r.application||"—"}</span></td>
+                      <td className="px-2 py-1.5"><SBadge s={r.status_dev}/></td>
+                      <td className="px-2 py-1.5 text-center">{r.pilot?"✈️":"—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="text-xs text-gray-400 italic">Tidak ada dokumen</p>}
+        </div>
+
+        {/* Recent Tickets */}
+        <div>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">🎫 Tiket Terkini</p>
+          {recentTickets.length > 0 ? (
+            <div className="rounded-xl border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead><tr className="bg-gray-50 border-b">
+                  {["Judul","Sev","Status","Respon"].map(h=><th key={h} className="px-2 py-2 text-left text-gray-400 font-semibold">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {recentTickets.map((r,i)=>(
+                    <tr key={i} className={`border-b last:border-0 ${i%2===0?"bg-white":"bg-gray-50/30"}`}>
+                      <td className="px-2 py-1.5 text-gray-700 max-w-[130px] truncate">{r.judul_ticket||r.detail_issue||"—"}</td>
+                      <td className="px-2 py-1.5"><SevBadge s={r.severity}/></td>
+                      <td className="px-2 py-1.5">
+                        <span className={`px-1 py-0.5 rounded text-xs font-medium ${(r.status_ticket||"").toLowerCase().includes("close")?"bg-emerald-50 text-emerald-600":"bg-amber-50 text-amber-600"}`}>
+                          {(r.status_ticket||"").toLowerCase().includes("close")?"✓":"⏳"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 font-mono text-gray-500 text-xs">{r.br_respon_time||"—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="text-xs text-gray-400 italic">Tidak ada tiket</p>}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Main ───────────────────────────────────────────────────────────
 export default function DashboardBR() {
   const [tab,    setTab]    = useState<MainTab>("home")
@@ -336,9 +436,9 @@ export default function DashboardBR() {
   const [page,   setPage]   = useState(1)
   const PAGE = 12
 
-  const [selCoda,  setSelCoda]  = useState<CodaRow|null>(null)
-  const [selLogix, setSelLogix] = useState<LogixRow|null>(null)
-  const [selMember,setSelMember]= useState<typeof BR_MEMBERS[0]|null>(null)
+  const [selCoda,   setSelCoda]   = useState<CodaRow|null>(null)
+  const [selLogix,  setSelLogix]  = useState<LogixRow|null>(null)
+  const [selMember, setSelMember] = useState<typeof BR_MEMBERS[0]|null>(null)
 
   const [docS,  setDocS]  = useState("")
   const [docF,  setDocF]  = useState<Record<string,string>>({})
@@ -446,21 +546,16 @@ export default function DashboardBR() {
     <div className="space-y-5 pb-10">
       <CodaModal  row={selCoda}  onClose={()=>setSelCoda(null)}/>
       <LogixModal row={selLogix} onClose={()=>setSelLogix(null)}/>
-      <MemberModal member={selMember} docs={selMember?mC(selMember.name):[]} tickets={selMember?mL(selMember.name):[]} onClose={()=>setSelMember(null)}/>
+      <UnifiedMemberModal
+        member={selMember}
+        docs={selMember ? mC(selMember.name) : []}
+        tickets={selMember ? mL(selMember.name) : []}
+        grade={selMember ? (grades.find(g=>g.name===selMember.name)||null) : null}
+        onClose={()=>setSelMember(null)}/>
 
-      {/* Hero Banner */}
-      <div className="relative rounded-2xl overflow-hidden">
-        <img src="/images/Banner.svg" alt="ODSS Banner" className="w-full h-32 object-cover object-center"/>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent flex items-center px-6">
-          <div className="flex items-center justify-between w-full flex-wrap gap-4">
-            <div><p className="text-indigo-300 text-xs font-semibold uppercase tracking-widest mb-1">Business Representative</p><h1 className="text-3xl font-black text-white drop-shadow">BR Productivity</h1><p className="text-slate-300 text-sm mt-1">Monitoring kinerja tim BR — Dokumen · Tiket · Testing</p></div>
-            <div className="flex gap-6 text-center">
-              {[{val:brC.length,l:"Total Dok",i:"📄"},{val:brL.length,l:"Total Tiket",i:"🎫"},{val:brC.filter(r=>(r.pilot||"").trim()!=="").length,l:"Pilot",i:"✈️"},{val:brC.filter(r=>["RELEASE","DONE"].includes((r.status_dev||"").toUpperCase())).length,l:"Release",i:"🚀"}].map(s=>(
-                <div key={s.l}><p className="text-2xl">{s.i}</p><p className="text-2xl font-black text-white drop-shadow">{s.val}</p><p className="text-xs text-slate-300 mt-0.5">{s.l}</p></div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Hero Banner — clean, no overlay */}
+      <div className="rounded-2xl overflow-hidden">
+        <img src="/images/Banner.svg" alt="ODSS Banner" className="w-full" style={{ display:"block" }}/>
       </div>
 
       {/* Nav */}
@@ -494,25 +589,53 @@ export default function DashboardBR() {
             {stats.map(m=>(
               <div key={m.name} className={`rounded-2xl p-4 border-2 cursor-pointer transition-all hover:shadow-lg ${active===m.name?"shadow-lg scale-[1.02]":""}`}
                 style={{ borderColor:active===m.name?m.color:"transparent",backgroundColor:`${m.color}08` }}
-                onClick={()=>setSelMember(m)}>
+                onClick={()=>setActive(active===m.name?null:m.name)}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor:m.color }}>{m.emoji}</div>
                     <div><p className="text-sm font-black text-gray-800">{m.name}</p><p className="text-xs" style={{ color:m.color }}>{m.doneRate}% done</p></div>
                   </div>
-                  <button onClick={e=>{e.stopPropagation();setSelMember(m)}}
-                    className="w-7 h-7 rounded-lg bg-white/70 hover:bg-white flex items-center justify-center text-xs shadow-sm border" title="Detail produktivitas">📊</button>
+
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  {[{val:m.docs,l:"Dok"},{val:m.tickets,l:"Tiket"},{val:m.pilot,l:"Pilot",a:true},{val:m.done,l:"Done"}].map(s=>(
-                    <div key={s.l} className="bg-white/60 rounded-lg p-2"><p className="text-lg font-black" style={{ color:s.a?m.color:"#374151" }}>{s.val}</p><p className="text-xs text-gray-400">{s.l}</p></div>
-                  ))}
-                </div>
-                <div className="mt-3"><div className="w-full bg-gray-100 rounded-full h-1.5"><div className="h-1.5 rounded-full" style={{ width:`${m.doneRate}%`,backgroundColor:m.color }}/></div></div>
+                {/* Top apps for this member */}
+                {(() => {
+                  const memberDocs = brC.filter(r => matchC(r, m.name))
+                  const topApps = Object.entries(
+                    memberDocs.reduce((acc,r) => { acc[r.application||"?"]=(acc[r.application||"?"]||0)+1; return acc }, {}as Record<string,number>)
+                  ).sort((a,b)=>b[1]-a[1]).slice(0,3)
+                  const doneCount = memberDocs.filter(r=>["PILOT","RELEASE","DONE"].includes((r.status_dev||"").toUpperCase())).length
+                  return (
+                    <>
+                      <div className="space-y-1.5 mb-2.5">
+                        {topApps.length > 0 ? topApps.map(([app, count], i) => (
+                          <div key={app} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor:CHART_COLORS[i%CHART_COLORS.length] }}/>
+                            <span className="text-xs text-gray-600 flex-1 truncate">{app}</span>
+                            <span className="text-xs font-bold" style={{ color:m.color }}>{count}</span>
+                          </div>
+                        )) : <p className="text-xs text-gray-400 italic">Belum ada dokumen</p>}
+                      </div>
+                      <div className="pt-2 border-t border-dashed flex justify-between items-center">
+                        <div className="text-center">
+                          <p className="text-base font-black text-gray-800">{memberDocs.length}</p>
+                          <p className="text-xs text-gray-400">Total Dok</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-black" style={{ color:m.color }}>{doneCount}</p>
+                          <p className="text-xs text-gray-400">Done</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-black text-emerald-600">{m.tickets}</p>
+                          <p className="text-xs text-gray-400">Tiket</p>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 text-right">💡 Klik card untuk filter · Klik 📊 untuk detail produktivitas anggota</p>
+          <p className="text-xs text-gray-400 text-right">💡 Klik card untuk filter per anggota · Klik nama di Leaderboard untuk detail</p>
 
           <div className="grid grid-cols-2 gap-5">
             <div className="bg-white rounded-2xl border p-5">
@@ -541,31 +664,7 @@ export default function DashboardBR() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border p-5">
-            <h3 className="font-bold text-gray-800 mb-4">📊 Scoreboard Tim BR</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr style={{ backgroundColor:"#0f172a" }} className="text-white">{["#","Anggota","Dok","Done","Pilot","Done %","Tiket","Closed","Avg Respon","Bobot","Detail"].map(h=><th key={h} className="px-3 py-2.5 text-left text-xs font-semibold">{h}</th>)}</tr></thead>
-                <tbody>
-                  {[...stats].sort((a,b)=>(b.done+b.closed)-(a.done+a.closed)).map((m,i)=>(
-                    <tr key={m.name} className={`border-t ${i===0?"bg-yellow-50":i%2===0?"bg-white":"bg-gray-50/50"} hover:bg-indigo-50/30`}>
-                      <td className="px-3 py-2.5 text-center">{i===0?"🥇":i===1?"🥈":i===2?"🥉":<span className="text-gray-400 text-xs">{i+1}</span>}</td>
-                      <td className="px-3 py-2.5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor:m.color }}>{m.emoji}</div><span className="font-semibold text-sm">{m.name}</span></div></td>
-                      <td className="px-3 py-2.5 text-center font-medium">{m.docs}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-emerald-600">{m.done}</td>
-                      <td className="px-3 py-2.5 text-center font-bold" style={{ color:m.color }}>{m.pilot}</td>
-                      <td className="px-3 py-2.5 text-center">{m.doneRate}%</td>
-                      <td className="px-3 py-2.5 text-center font-medium">{m.tickets}</td>
-                      <td className="px-3 py-2.5 text-center text-emerald-600 font-bold">{m.closed}</td>
-                      <td className="px-3 py-2.5 text-center text-xs text-gray-500">{sToHms(m.avgR)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold" style={{ color:m.color }}>{m.bobot}</td>
-                      <td className="px-3 py-2.5 text-center"><button onClick={()=>setSelMember(m)} className="px-2 py-1 rounded-lg text-xs font-semibold text-white hover:opacity-80" style={{ backgroundColor:m.color }}>Detail</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+
             {/* ── Grade Card + Leaderboard ── */}
           <div className="grid grid-cols-3 gap-5">
             {/* My Grade Card */}
@@ -619,7 +718,7 @@ export default function DashboardBR() {
                     return (
                       <div key={g.name}
                         className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${active===g.name?"ring-2 ring-offset-1":"hover:bg-gray-50"}`}
-                        style={active===g.name ? { ringColor:member.color } : {}}
+                        style={active===g.name ? { outline:`2px solid ${member.color}`, outlineOffset:"2px" } : {}}
                         onClick={()=>setSelMember(member)}>
                         {/* Rank badge */}
                         <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
@@ -650,13 +749,16 @@ export default function DashboardBR() {
                     )
                   })}
                 </div>
-                <div className="mt-4 pt-3 border-t flex gap-3 flex-wrap">
-                  {(Object.entries(GRADE_CONFIG) as [string, typeof GRADE_CONFIG["A"]][]).map(([g, cfg]) => (
-                    <div key={g} className="flex items-center gap-1.5">
-                      <div className="w-4 h-4 rounded-md" style={{ backgroundColor:cfg.color }}/>
-                      <span className="text-xs text-gray-500">Grade {g} ≥ {cfg.min}pt</span>
-                    </div>
-                  ))}
+                <div className="mt-4 pt-3 border-t flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex gap-3 flex-wrap">
+                    {(Object.entries(GRADE_CONFIG) as [string, typeof GRADE_CONFIG["A"]][]).map(([g, cfg]) => (
+                      <div key={g} className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-md" style={{ backgroundColor:cfg.color }}/>
+                        <span className="text-xs text-gray-500">Grade {g} ≥ {cfg.min}pt</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400">💡 Klik nama untuk detail scorecard</p>
                 </div>
               </div>
             </div>
@@ -697,7 +799,7 @@ export default function DashboardBR() {
           </div>
           <div className="bg-white rounded-2xl border p-5">
             <h3 className="font-bold text-gray-800 mb-3">Daftar Dokumen <span className="text-sm text-gray-400 font-normal">({filtC.length})</span></h3>
-            <SearchBar search={docS} onSearch={v=>{setDocS(v);setPage(1)}} filters={docF} onFilter={(k,v)=>{setDocF(f=>({...f,[k]:v}));setPage(1)}}
+            <SearchBar search={docS} onSearch={v=>{setDocS(v);setPage(1)}} filters={docF} onFilter={(k:string,v:string)=>{setDocF(f=>({...f,[k]:v}));setPage(1)}}
               filterOpts={[{key:"status_dev",label:"Status Dev",options:["","OPEN","DEV","REVIEW","PILOT","RELEASE","DONE","CANCEL","HOLD"]},{key:"application",label:"Aplikasi",options:["", ...appOpts]},{key:"quartal",label:"Quartal",options:["", ...qOpts]}]}/>
             <div className="overflow-x-auto rounded-xl border">
               <table className="w-full text-sm">
@@ -766,7 +868,7 @@ export default function DashboardBR() {
           </div>
           <div className="bg-white rounded-2xl border p-5">
             <h3 className="font-bold text-gray-800 mb-3">Detail Tiket <span className="text-sm text-gray-400 font-normal">({filtL.length})</span></h3>
-            <SearchBar search={tikS} onSearch={setTikS} filters={tikF} onFilter={(k,v)=>setTikF(f=>({...f,[k]:v}))}
+            <SearchBar search={tikS} onSearch={setTikS} filters={tikF} onFilter={(k:string,v:string)=>setTikF(f=>({...f,[k]:v}))}
               filterOpts={[{key:"severity",label:"Severity",options:["","Critical","High","Medium","Low"]},{key:"aplikasi",label:"Aplikasi",options:["", ...lAppOpts]},{key:"status",label:"Status",options:["","close","open"]}]}/>
             <div className="overflow-x-auto rounded-xl border">
               <table className="w-full text-sm">

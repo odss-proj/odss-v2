@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase"
+import OwnCloudView from "../kpi/OwnCloudView"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie, Legend, LineChart, Line,
@@ -11,7 +12,7 @@ import {
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type MainTab = "home" | "phi" | "indo"
+type MainTab = "home" | "phi" | "indo" | "owncloud"
 type PhiTab  = "backlog" | "backup" | "restore"
 type IndoTab = "area_cover" | "monitoring"
 
@@ -276,9 +277,10 @@ export default function DashboardGlobal() {
       {/* ── MAIN TABS ──────────────────────────────────── */}
       <div className="flex gap-2">
         {([
-          { key: "home", label: "🏠 Home",        desc: "Overview" },
-          { key: "phi",  label: "🇵🇭 PHI",         desc: "Philippines" },
-          { key: "indo", label: "🇮🇩 Indonesia",    desc: "Lokal" },
+          { key: "home",     label: "🏠 Home",        desc: "Overview" },
+          { key: "phi",      label: "🇵🇭 PHI",         desc: "Philippines" },
+          { key: "indo",     label: "🇮🇩 Indonesia",    desc: "Lokal" },
+          { key: "owncloud", label: "☁️ Own Cloud",    desc: "Achievement" },
         ] as const).map(t => (
           <button key={t.key} onClick={() => { setMainTab(t.key); setPage(1) }}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
@@ -1009,6 +1011,15 @@ export default function DashboardGlobal() {
               </div>
             )
           })()}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          OWN CLOUD TAB
+      ══════════════════════════════════════════════ */}
+      {mainTab === "owncloud" && (
+        <div className="space-y-5">
+          <OwnCloudView />
         </div>
       )}
 

@@ -1,4 +1,4 @@
-export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS" | "SH-APPC" | "SH-MDM"
+export type Role = "MDM" | "APPC" | "APPG" | "BR" | "DEV" | "SUPERADMIN" | "SH-APPS" | "SH-APPC" | "SH-MDM" | "SH-DEVG1" | "SH-DEVG2" | "SH-DEVRND" | "SH-DEVDSO" | "SH-GLOBAL"
 
 export const sidebarMenu: Record<
   Role,
@@ -63,6 +63,12 @@ export const sidebarMenu: Record<
   APPG: [],
   BR: [],
   DEV: [],
+
+  "SH-DEVG1":  [],
+  "SH-DEVG2":  [],
+  "SH-DEVRND": [],
+  "SH-DEVDSO": [],
+  "SH-GLOBAL": [],
 
   SUPERADMIN: [
     {

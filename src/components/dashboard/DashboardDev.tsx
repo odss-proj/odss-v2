@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase"
+import Banner from "../layout/banner"
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend, CartesianGrid
@@ -114,15 +115,17 @@ const CHART_COLORS = ["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4
 // ─────────────────────────────────────────────
 // Main Dashboard
 // ─────────────────────────────────────────────
-export default function DashboardDev() {
-  const [activeGroup, setActiveGroup] = useState<Group>("G1")
+export default function DashboardDev({ fixedGroup }: { fixedGroup?: Group }) {
+  const [activeGroup, setActiveGroup] = useState<Group>(fixedGroup ?? "G1")
   const [activeTab,   setActiveTab]   = useState<Tab>("home")
   const [coda,        setCoda]        = useState<CodaRow[]>([])
   const [sprints,     setSprints]     = useState<SprintRow[]>([])
   const [backlogs,    setBacklogs]    = useState<BacklogRow[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [search,      setSearch]      = useState("")
-  const [page,        setPage]        = useState(1)
+  const [loading,        setLoading]        = useState(true)
+  const [search,         setSearch]         = useState("")
+  const [page,           setPage]           = useState(1)
+  const [selectedStatus, setSelectedStatus] = useState<{ label: string; statuses: string[] } | null>(null)
+  const [selectedPic,    setSelectedPic]    = useState<string | null>(null)
   const PAGE = 15
 
   useEffect(() => {
@@ -235,53 +238,131 @@ export default function DashboardDev() {
   return (
     <div className="space-y-5">
 
-      {/* ── GROUP SELECTOR ── */}
-      <div className="flex gap-2 flex-wrap">
-        {GROUPS.map(g => {
-          const m = GROUP_META[g]
-          const isActive = activeGroup === g
-          return (
-            <button key={g} onClick={() => { setActiveGroup(g); setActiveTab("home"); setPage(1) }}
-              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
-                isActive
-                  ? `text-white border-transparent shadow-lg`
-                  : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
-              }`}
-              style={isActive ? { background: `linear-gradient(135deg, ${m.color}, ${m.color}cc)` } : {}}>
-              {g}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* ── GROUP HEADER BANNER ── */}
-      <div className={`rounded-2xl p-6 bg-gradient-to-r ${meta.gradient} text-white relative overflow-hidden`}>
-        <div className="absolute right-0 top-0 w-48 h-48 rounded-full opacity-10 -translate-y-1/4 translate-x-1/4"
-          style={{ background: "white" }} />
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-white/70 text-sm font-medium">Developer Team</p>
-            <h2 className="text-3xl font-black tracking-tight">{activeGroup}</h2>
-            <p className="text-white/70 text-sm mt-1">{total} dokumen total · {groupSprint.length} sprint entries · {groupBacklog.length} backlog items</p>
-          </div>
-          <div className="flex gap-6 text-center">
-            <div>
-              <p className="text-3xl font-black">{bcr}%</p>
-              <p className="text-white/70 text-xs mt-0.5">BCR</p>
+      {/* ── MODAL: STATUS DETAIL ── */}
+      {selectedStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setSelectedStatus(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.color}aa)` }}>
+              <div>
+                <h3 className="font-bold text-white text-lg">Status: {selectedStatus.label}</h3>
+                <p className="text-white/70 text-xs mt-0.5">{groupCoda.filter(r => selectedStatus.statuses.includes(r.status_dev)).length} dokumen · {activeGroup}</p>
+              </div>
+              <button onClick={() => setSelectedStatus(null)} className="text-white/80 hover:text-white text-2xl leading-none">×</button>
             </div>
-            <div className="w-px bg-white/20" />
-            <div>
-              <p className="text-3xl font-black">{bugRate}%</p>
-              <p className="text-white/70 text-xs mt-0.5">Bug Rate</p>
-            </div>
-            <div className="w-px bg-white/20" />
-            <div>
-              <p className="text-3xl font-black">{otdRate}%</p>
-              <p className="text-white/70 text-xs mt-0.5">OTD</p>
+            <div className="overflow-y-auto flex-1">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 border-b">
+                  <tr className="text-xs text-gray-500">
+                    <th className="px-4 py-3 text-left">#</th>
+                    <th className="px-4 py-3 text-left">Dokumen</th>
+                    <th className="px-4 py-3 text-left">Dev PIC</th>
+                    <th className="px-4 py-3 text-left">Aplikasi</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 text-center">Bugs</th>
+                    <th className="px-4 py-3 text-center">On Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupCoda.filter(r => selectedStatus.statuses.includes(r.status_dev)).map((r, i) => (
+                    <tr key={i} className={`border-t ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                      <td className="px-4 py-2 text-gray-400 text-xs">{i + 1}</td>
+                      <td className="px-4 py-2 text-xs text-gray-700 max-w-[180px]">{r.doc_name}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600">{r.dev_pic?.split(",")[0]}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600">{r.application}</td>
+                      <td className="px-4 py-2 text-center"><StatusBadge status={r.status_dev || ""} /></td>
+                      <td className="px-4 py-2 text-center text-xs">{r.flag_bugs ? <span className="text-red-500 font-bold">🐛</span> : <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-2 text-center text-xs">{r.flag_on_time ? "✅" : <span className="text-red-400">❌</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ── MODAL: DEVELOPER DETAIL ── */}
+      {selectedPic && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setSelectedPic(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.color}aa)` }}>
+              <div>
+                <h3 className="font-bold text-white text-lg">👤 {selectedPic}</h3>
+                <p className="text-white/70 text-xs mt-0.5">{groupCoda.filter(r => (r.dev_pic || "").split(",")[0].trim() === selectedPic).length} dokumen · {activeGroup}</p>
+              </div>
+              <button onClick={() => setSelectedPic(null)} className="text-white/80 hover:text-white text-2xl leading-none">×</button>
+            </div>
+            {(() => {
+              const docs = groupCoda.filter(r => (r.dev_pic || "").split(",")[0].trim() === selectedPic)
+              const doneD   = docs.filter(r => STATUS_DONE.includes(r.status_dev)).length
+              const bugsD   = docs.filter(r => r.flag_bugs === true).length
+              const ontimeD = docs.filter(r => r.flag_on_time === true).length
+              return (
+                <>
+                  <div className="grid grid-cols-4 gap-3 px-6 py-4 border-b bg-gray-50">
+                    <div className="text-center"><p className="text-2xl font-black text-gray-800">{docs.length}</p><p className="text-xs text-gray-400">Total</p></div>
+                    <div className="text-center"><p className="text-2xl font-black text-green-600">{doneD}</p><p className="text-xs text-gray-400">Done</p></div>
+                    <div className="text-center"><p className="text-2xl font-black text-red-500">{bugsD}</p><p className="text-xs text-gray-400">Bugs</p></div>
+                    <div className="text-center"><p className="text-2xl font-black" style={{ color: meta.color }}>{pct(ontimeD, docs.length)}%</p><p className="text-xs text-gray-400">OTD</p></div>
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-gray-50 border-b">
+                        <tr className="text-xs text-gray-500">
+                          <th className="px-4 py-3 text-left">#</th>
+                          <th className="px-4 py-3 text-left">Dokumen</th>
+                          <th className="px-4 py-3 text-left">Aplikasi</th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                          <th className="px-4 py-3 text-center">Dev Point</th>
+                          <th className="px-4 py-3 text-center">Bugs</th>
+                          <th className="px-4 py-3 text-center">On Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {docs.map((r, i) => (
+                          <tr key={i} className={`border-t ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                            <td className="px-4 py-2 text-gray-400 text-xs">{i + 1}</td>
+                            <td className="px-4 py-2 text-xs text-gray-700 max-w-[200px]">{r.doc_name}</td>
+                            <td className="px-4 py-2 text-xs text-gray-600">{r.application}</td>
+                            <td className="px-4 py-2 text-center"><StatusBadge status={r.status_dev || ""} /></td>
+                            <td className="px-4 py-2 text-center text-xs font-medium" style={{ color: meta.color }}>{r.dev_point || "—"}</td>
+                            <td className="px-4 py-2 text-center text-xs">{r.flag_bugs ? <span className="text-red-500 font-bold">🐛</span> : <span className="text-gray-300">—</span>}</td>
+                            <td className="px-4 py-2 text-center text-xs">{r.flag_on_time ? "✅" : <span className="text-red-400">❌</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── GROUP SELECTOR — hanya tampil jika tidak ada fixedGroup ── */}
+      {!fixedGroup && (
+        <div className="flex gap-2 flex-wrap">
+          {GROUPS.map(g => {
+            const m = GROUP_META[g]
+            const isActive = activeGroup === g
+            return (
+              <button key={g} onClick={() => { setActiveGroup(g); setActiveTab("home"); setPage(1) }}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
+                  isActive
+                    ? `text-white border-transparent shadow-lg`
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                }`}
+                style={isActive ? { background: `linear-gradient(135deg, ${m.color}, ${m.color}cc)` } : {}}>
+                {g}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── GROUP HEADER BANNER ── */}
+      <Banner />
 
       {/* ── TABS ── */}
       <div className="flex gap-2 flex-wrap">
@@ -329,15 +410,17 @@ export default function DashboardDev() {
               {/* Progress bars */}
               <div className="space-y-2 mb-4">
                 {[
-                  { label: "Release/Done", count: doneCount,    color: "#22c55e" },
-                  { label: "Pilot",        count: pilotCount,   color: meta.color },
-                  { label: "On Progress",  count: progressCount, color: "#3b82f6" },
-                  { label: "Open",         count: openCount,    color: "#f59e0b" },
-                  { label: "Blocked",      count: blockedCount, color: "#ef4444" },
+                  { label: "Release/Done", count: doneCount,    color: "#22c55e", statuses: STATUS_DONE },
+                  { label: "Pilot",        count: pilotCount,   color: meta.color, statuses: ["PILOT"] },
+                  { label: "On Progress",  count: progressCount, color: "#3b82f6", statuses: STATUS_PROGRESS },
+                  { label: "Open",         count: openCount,    color: "#f59e0b", statuses: STATUS_OPEN },
+                  { label: "Blocked",      count: blockedCount, color: "#ef4444", statuses: STATUS_BLOCKED },
                 ].map(s => (
-                  <div key={s.label} className="flex items-center gap-3">
-                    <div className="w-24 text-xs text-gray-500 text-right shrink-0">{s.label}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                  <div key={s.label} className="flex items-center gap-3 group cursor-pointer" onClick={() => {
+                    setSelectedStatus({ label: s.label, statuses: s.statuses })
+                  }}>
+                    <div className="w-24 text-xs text-gray-500 text-right shrink-0 group-hover:text-gray-800 transition-colors">{s.label}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden group-hover:ring-2 ring-offset-1 transition-all" style={{ "--tw-ring-color": s.color } as React.CSSProperties}>
                       <div className="h-5 rounded-full flex items-center pl-2 transition-all"
                         style={{ width: `${pct(s.count, total)}%`, backgroundColor: s.color, minWidth: s.count > 0 ? "2rem" : 0 }}>
                         {s.count > 0 && <span className="text-white text-xs font-semibold">{s.count}</span>}
@@ -367,51 +450,51 @@ export default function DashboardDev() {
 
           </div>
 
-          {/* PIC Performance Table */}
+          {/* PIC Performance Ranking */}
           <div className="bg-white rounded-2xl border p-5">
-            <h3 className="font-semibold text-gray-800 mb-4">Performance per Developer</h3>
-            <div className="overflow-x-auto rounded-xl border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white text-xs" style={{ background: `linear-gradient(90deg, ${meta.color}, ${meta.color}aa)` }}>
-                    <th className="px-4 py-3 text-left">Developer</th>
-                    <th className="px-4 py-3 text-center">Total</th>
-                    <th className="px-4 py-3 text-center">Done</th>
-                    <th className="px-4 py-3 text-center">Done Rate</th>
-                    <th className="px-4 py-3 text-center">Bugs</th>
-                    <th className="px-4 py-3 text-center">On Time</th>
-                    <th className="px-4 py-3 text-left">Progress Bar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {picStats.map((p, i) => (
-                    <tr key={p.pic} className={`border-t ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50`}>
-                      <td className="px-4 py-3 font-medium text-gray-800 text-sm">{p.pic}</td>
-                      <td className="px-4 py-3 text-center text-gray-600">{p.total}</td>
-                      <td className="px-4 py-3 text-center text-green-600 font-medium">{p.done}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.rate >= 70 ? "bg-green-100 text-green-700" : p.rate >= 40 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"}`}>
-                          {p.rate}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {p.bugs > 0 ? <span className="text-red-500 font-bold">{p.bugs}</span> : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-medium ${pct(p.ontime, p.total) >= 70 ? "text-green-600" : "text-yellow-600"}`}>
-                          {pct(p.ontime, p.total)}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 w-40">
-                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden flex">
-                          <div className="h-3 bg-green-400" style={{ width: `${pct(p.done, p.total)}%` }} />
-                          <div className="h-3 bg-blue-400" style={{ width: `${pct(p.total - p.done, p.total)}%` }} />
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-800">🏆 Ranking Developer</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Klik developer untuk melihat detail dokumen</p>
+              </div>
+              <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{picStats.length} developer</span>
+            </div>
+            <div className="space-y-2">
+              {picStats.sort((a, b) => b.rate - a.rate).map((p, i) => {
+                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`
+                const isMedal = i < 3
+                return (
+                  <div key={p.pic}
+                    onClick={() => setSelectedPic(p.pic)}
+                    className={`flex items-center gap-4 px-4 py-3 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 ${isMedal ? "border-yellow-200 bg-yellow-50/50" : "border-gray-100 bg-gray-50/50 hover:bg-white"}`}>
+                    {/* Rank */}
+                    <div className="w-8 text-center text-lg shrink-0">{medal}</div>
+                    {/* Name */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-sm truncate ${isMedal ? "text-gray-900" : "text-gray-700"}`}>{p.pic}</p>
+                      <p className="text-xs text-gray-400">{p.total} dok · {p.done} done</p>
+                    </div>
+                    {/* Done Rate bar */}
+                    <div className="w-32 hidden sm:block">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div className="h-2 rounded-full transition-all"
+                            style={{ width: `${p.rate}%`, backgroundColor: p.rate >= 70 ? "#22c55e" : p.rate >= 40 ? "#f59e0b" : "#ef4444" }} />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <span className={`text-xs font-bold w-9 text-right ${p.rate >= 70 ? "text-green-600" : p.rate >= 40 ? "text-yellow-600" : "text-red-500"}`}>{p.rate}%</span>
+                      </div>
+                    </div>
+                    {/* Badges */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {p.bugs > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">🐛 {p.bugs}</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pct(p.ontime, p.total) >= 70 ? "bg-teal-100 text-teal-700" : "bg-orange-100 text-orange-600"}`}>
+                        ⏱ {pct(p.ontime, p.total)}%
+                      </span>
+                    </div>
+                    <div className="text-gray-300 text-sm shrink-0">›</div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
