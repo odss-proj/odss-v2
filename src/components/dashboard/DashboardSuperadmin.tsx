@@ -6,7 +6,6 @@ import * as XLSX from "xlsx"
 import { supabase } from "../../lib/supabase"
 
 type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
-type MdmTabKey    = "mdm_setting"
 type DevTabKey    = "dev_coda" | "dev_sprint" | "dev_backlog"
 type GlobalTabKey = "global_backup" | "global_restore" | "global_backlog" | "global_pilot" | "global_vm"
 type TabKey       = AppsTabKey | MdmTabKey | DevTabKey | GlobalTabKey
@@ -60,6 +59,7 @@ const parseDate = (val: unknown): string | null => {
     if (!s) return null
 
     // Format: "2026 07:24:57-04-15" → extract year + last two date parts
+    // Try pattern: YYYY HH:MM:SS-MM-DD or similar weird formats
     const weirdMatch = s.match(/^(\d{4})\s+[\d:]+[-](\d{2})[-](\d{2})$/)
     if (weirdMatch) {
       const [, y, m, d] = weirdMatch
@@ -397,11 +397,6 @@ const APPS_TABS: TabConfig[] = [
   { key:"monitoring_wf",label:"Monitoring WF",  icon:"📊", color:"bg-gray-100 text-gray-600", activeColor:"bg-green-500 text-white",  description:"Monitoring workflow dan status pengerjaan",               section:"apps" },
   { key:"coda",         label:"Coda",           icon:"📋", color:"bg-gray-100 text-gray-600", activeColor:"bg-purple-500 text-white", description:"Upload dan sinkronisasi data dari Coda",                  section:"apps" },
   { key:"logix",        label:"Logix",          icon:"🚚", color:"bg-gray-100 text-gray-600", activeColor:"bg-orange-500 text-white", description:"Import data logistik dan pengiriman dari Logix",          section:"apps" },
-]
-
-// RESOLVED: MDM_TABS dari main-v2
-const MDM_TABS: TabConfig[] = [
-  { key:"mdm_setting", label:"Monitoring Setting", icon:"📐", color:"bg-gray-100 text-gray-600", activeColor:"bg-blue-500 text-white", description:"Upload data Monitoring Setting MDM dari file MDM_2026.xlsx — sheet 'Monitoring Setting 2026'", section:"mdm" },
 ]
 
 const DEV_TABS: TabConfig[] = [
