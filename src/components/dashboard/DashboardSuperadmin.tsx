@@ -6,6 +6,7 @@ import * as XLSX from "xlsx"
 import { supabase } from "../../lib/supabase"
 
 type AppsTabKey    = "dt_transfer" | "own_cloud" | "monitoring_wf" | "coda" | "logix"
+type MdmTabKey    = "mdm_setting"
 type DevTabKey    = "dev_coda" | "dev_sprint" | "dev_backlog"
 type GlobalTabKey = "global_backup" | "global_restore" | "global_backlog" | "global_pilot" | "global_vm"
 type TabKey       = AppsTabKey | MdmTabKey | DevTabKey | GlobalTabKey
@@ -411,6 +412,10 @@ const GLOBAL_TABS: TabConfig[] = [
   { key:"global_backlog", label:"Backlog PHI",          icon:"📋", color:"bg-gray-100 text-gray-600", activeColor:"bg-emerald-500 text-white",description:"Upload Global-Backlog_PHI.xlsx — concern & backlog tracker",           section:"global" },
   { key:"global_pilot",   label:"VM Monitoring",        icon:"📊", color:"bg-gray-100 text-gray-600", activeColor:"bg-violet-500 text-white", description:"Upload VM_Storage_Monitoring.xlsx — sheet VM Drive Detail",           section:"global" },
   { key:"global_vm",      label:"Global Area CNS",      icon:"🗺️", color:"bg-gray-100 text-gray-600", activeColor:"bg-cyan-500 text-white",   description:"Upload Area_Cover_CNS_Merged.xlsx — gabungan Area Cover + BOM ROM NOM + List CNS Aktif", section:"global" },
+]
+
+const MDM_TABS: TabConfig[] = [
+  { key:"mdm_setting", label:"MDM Setting", icon:"⚙️", color:"bg-gray-100 text-gray-600", activeColor:"bg-blue-500 text-white", description:"Upload file MDM_2026.xlsx — sheet Monitoring Setting 2026", section:"mdm" },
 ]
 
 const ALL_TABS = [...APPS_TABS, ...MDM_TABS, ...DEV_TABS, ...GLOBAL_TABS]

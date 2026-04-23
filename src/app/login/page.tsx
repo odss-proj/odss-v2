@@ -1,4 +1,4 @@
-  "use client"
+"use client"
 
 import { useState } from "react"
 import Image from "next/image"
@@ -58,6 +58,11 @@ export default function LoginPage() {
         APPG: "/dashboard/appg",
         BR: "/dashboard/br",
         DEV: "/dashboard/dev",
+        "SH-GLOBAL": "/dashboard/global",
+        "SH-DEVG1":  "/dashboard/dev/g1",
+        "SH-DEVG2":  "/dashboard/dev/g2",
+        "SH-DEVRND": "/dashboard/dev/rnd",
+        "SH-DEVDSO": "/dashboard/dev/dso",
         SUPERADMIN: "/superadmin",
       }
 
