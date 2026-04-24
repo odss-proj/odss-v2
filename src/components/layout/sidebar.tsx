@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
 import { sidebarMenu, Role } from "../../config/sidebar-menu"
 import { getUserRole } from "../../lib/get-user-role"
@@ -45,13 +46,19 @@ export default function Sidebar({ isOpen }: Props) {
 
   return (
     <div
-      className={`fixed top-0 left-0 h-screen w-64 bg-white border-r flex flex-col justify-between transition-transform duration-300 z-50
+      className={`fixed top-0 left-0 h-screen w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-700 flex flex-col justify-between transition-transform duration-300 z-50
       ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
     >
       {/* TOP */}
       <div>
-        <div className="p-6 text-xl font-bold text-green-600">
-          ODSS
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+          <Image
+            src="/images/logo_odss.svg"
+            alt="ODSS"
+            width={90}
+            height={32}
+            className="object-contain"
+          />
         </div>
 
         <div className="px-4 space-y-2">
@@ -73,7 +80,7 @@ export default function Sidebar({ isOpen }: Props) {
               const path = dashboardPath[role] || `/dashboard/${role.toLowerCase()}`
               router.push(path)
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer bg-green-500 text-white"
+            className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer bg-green-500 hover:bg-green-600 text-white transition-colors"
           >
             <LayoutDashboard size={18} />
             Dashboard
@@ -121,7 +128,7 @@ export default function Sidebar({ isOpen }: Props) {
           {/* STATIC */}
           <div
             onClick={() => router.push("/calendar")}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
           >
             <Calendar size={18} />
             Calendar
@@ -129,13 +136,13 @@ export default function Sidebar({ isOpen }: Props) {
 
           <div
             onClick={() => router.push("/notes")}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
           >
             <FileText size={18} />
             Notes
           </div>
 
-          <div className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <div className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
             <Headphones size={18} />
             Apps Support
           </div>
@@ -143,7 +150,7 @@ export default function Sidebar({ isOpen }: Props) {
       </div>
 
       {/* BOTTOM */}
-      <div className="p-4 space-y-4 border-t">
+      <div className="p-4 space-y-4 border-t dark:border-slate-700">
 
         <div className="bg-gradient-to-r from-blue-500 to-green-400 text-white p-4 rounded-xl text-center cursor-pointer">
           Extract KPI

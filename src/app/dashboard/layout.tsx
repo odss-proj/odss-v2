@@ -12,7 +12,7 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-slate-950 min-h-screen">
 
       {/* SIDEBAR */}
       <Sidebar isOpen={isSidebarOpen} />
@@ -24,7 +24,6 @@ export default function DashboardLayout({
         }`}
       >
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-
         <div className="p-6">{children}</div>
       </div>
     </div>

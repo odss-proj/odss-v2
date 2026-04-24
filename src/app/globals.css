@@ -15,3 +15,59 @@
   background: #d1d5db;
   border-radius: 10px;
 }
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* ── DARK MODE GLOBAL ── */
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Backgrounds */
+.dark .bg-white          { background-color: #1e293b !important; }
+.dark .bg-gray-50        { background-color: #0f172a !important; }
+.dark .bg-gray-100       { background-color: #1e293b !important; }
+.dark .bg-gray-200       { background-color: #334155 !important; }
+
+/* Borders */
+.dark .border            { border-color: #334155 !important; }
+.dark .border-b          { border-color: #334155 !important; }
+.dark .border-t          { border-color: #334155 !important; }
+.dark .border-gray-200   { border-color: #334155 !important; }
+
+/* Text */
+.dark .text-gray-800     { color: #e2e8f0 !important; }
+.dark .text-gray-700     { color: #cbd5e1 !important; }
+.dark .text-gray-600     { color: #94a3b8 !important; }
+.dark .text-gray-500     { color: #64748b !important; }
+.dark .text-gray-400     { color: #475569 !important; }
+
+/* Input / Select */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Table */
+.dark table            { background-color: #1e293b; }
+.dark thead tr         { background-color: #0f172a !important; }
+.dark tbody tr         { border-color: #334155 !important; }
+.dark .bg-gray-50 td   { background-color: #1a2744 !important; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover  { background-color: #1e293b !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
+.dark .hover\:bg-green-50:hover { background-color: #052e16 !important; }
+.dark .hover\:bg-red-50:hover   { background-color: #2d0a0a !important; }
+
+/* Rounded cards */
+.dark .rounded-2xl,
+.dark .rounded-xl {
+  border-color: #334155;
+}
