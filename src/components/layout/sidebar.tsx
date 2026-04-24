@@ -68,10 +68,14 @@ export default function Sidebar({ isOpen }: Props) {
             onClick={() => {
               if (!role) return
               const dashboardPath: Record<string, string> = {
-                "SH-APPS": "/dashboard/apps",
-                "SH-APPC": "/dashboard/appc-sh",
-                "SH-MDM":  "/dashboard/mdm-sh",
-                "SH-BR":   "/dashboard/br",
+                "SH-APPS":   "/dashboard/apps",
+                "SH-APPC":   "/dashboard/appc-sh",
+                "SH-MDM":    "/dashboard/mdm-sh",
+                "SH-DEVG1":  "/dashboard/dev/g1",
+                "SH-DEVG2":  "/dashboard/dev/g2",
+                "SH-DEVRND": "/dashboard/dev/rnd",
+                "SH-DEVDSO": "/dashboard/dev/dso",
+                "SH-GLOBAL": "/dashboard/global",
               }
               const path = dashboardPath[role] || `/dashboard/${role.toLowerCase()}`
               router.push(path)
